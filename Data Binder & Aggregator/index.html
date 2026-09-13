@@ -664,15 +664,6 @@
                     <h2 id="step2Title" class="section-title">資料合併結果概覽 (binds_row)</h2>
                 </div>
                 <div class="flex items-center gap-3">
-                    <!-- Deduplication Toggle Option -->
-                    <label class="toggle-wrapper">
-                        <span class="switch">
-                            <input type="checkbox" id="dedupeCheckbox">
-                            <span class="slider"></span>
-                        </span>
-                        <span id="dedupeLabel">去除完全重複列 (Deduplicate)</span>
-                    </label>
-
                     <button id="toggleRawDataBtn" class="btn btn-brand-subtle">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
                         <span id="toggleRawDataText">檢視合併後原始資料表</span>
@@ -868,7 +859,6 @@
             aggregatedResult: [], // Output of count calculation
             chartInstance: null,
             includeEmptyValues: true,
-            removeDuplicates: false,
             filterSearchQuery: ""
         };
 
@@ -884,7 +874,6 @@
                 dropSubText: "支援 .csv, .xlsx, .xls, .json（可同時選取多個檔案進行 binds_row 合併）",
                 uploadedListText: "已選擇的檔案列表：",
                 step2Title: "資料合併結果概覽 (binds_row)",
-                dedupeLabel: "去除完全重複列 (Deduplicate)",
                 toggleRawShow: "檢視合併後原始資料表",
                 toggleRawHide: "隱藏原始資料表",
                 exportRawBtnText: "匯出合併 raw CSV",
@@ -914,8 +903,7 @@
                 noResult: "沒有符合的資料或統計結果為空",
                 progressTitle: "資料讀取與合併中...",
                 toastReset: "已重置所有資料與狀態",
-                toastDedupeOn: "已啟用重複列過濾，剔除 {n} 筆重複資料",
-                toastDedupeOff: "已取消重複列過濾"
+                toastDedupe: "已自動刪除完全重複列，共過濾 {n} 筆重複資料"
             },
             en: {
                 appTitle: "Data Binder & Multi-Variable Aggregator",
@@ -927,7 +915,6 @@
                 dropSubText: "Supports CSV, Excel, and JSON files (performs binds_row vertical stack)",
                 uploadedListText: "Selected File List:",
                 step2Title: "2. Merged Dataset Overview (binds_row)",
-                dedupeLabel: "Remove Duplicate Rows",
                 toggleRawShow: "Show Merged Raw Data Table",
                 toggleRawHide: "Hide Raw Data Table",
                 exportRawBtnText: "Export Merged Raw CSV",
@@ -957,8 +944,7 @@
                 noResult: "No matching data or empty result",
                 progressTitle: "Reading & Merging Data...",
                 toastReset: "All data and state have been reset",
-                toastDedupeOn: "Deduplication enabled. Removed {n} duplicate rows.",
-                toastDedupeOff: "Deduplication disabled."
+                toastDedupe: "Auto-deduplicated {n} duplicate rows."
             }
         };
 
@@ -974,7 +960,6 @@
         const resetAllBtn = document.getElementById('resetAllBtn');
 
         const bindSummarySection = document.getElementById('bindSummarySection');
-        const dedupeCheckbox = document.getElementById('dedupeCheckbox');
         const statTotalRows = document.getElementById('statTotalRows');
         const statTotalCols = document.getElementById('statTotalCols');
         const statFileCount = document.getElementById('statFileCount');
@@ -1039,7 +1024,6 @@
             document.getElementById('uploadedListText').textContent = t.uploadedListText;
 
             document.getElementById('step2Title').textContent = t.step2Title;
-            document.getElementById('dedupeLabel').textContent = t.dedupeLabel;
             document.getElementById('exportRawBtnText').textContent = t.exportRawBtnText;
             document.getElementById('statLabelRows').textContent = t.statLabelRows;
             document.getElementById('statLabelCols').textContent = t.statLabelCols;
@@ -1096,13 +1080,6 @@
             });
 
             resetAllBtn.addEventListener('click', resetApp);
-
-            // Deduplication toggle
-            dedupeCheckbox.addEventListener('change', (e) => {
-                state.removeDuplicates = e.target.checked;
-                performBindsRow();
-                updateUI();
-            });
 
             // Raw data table toggle
             toggleRawDataBtn.addEventListener('click', () => {
@@ -1271,8 +1248,8 @@
                 });
             });
 
-            // Deduplication Logic
-            if (state.removeDuplicates && merged.length > 0) {
+            // Automatic Deduplication Logic
+            if (merged.length > 0) {
                 const initialCount = merged.length;
                 const uniqueSet = new Set();
                 const deduplicated = [];
@@ -1290,7 +1267,9 @@
                 const removedCount = initialCount - deduplicated.length;
                 merged = deduplicated;
                 
-                showToast(i18n[state.lang].toastDedupeOn.replace('{n}', removedCount), 'info');
+                if (removedCount > 0) {
+                    showToast(i18n[state.lang].toastDedupe.replace('{n}', removedCount), 'info');
+                }
             }
 
             state.mergedRawData = merged;
@@ -1603,8 +1582,6 @@
             state.allColumns = [];
             state.selectedGroupBy = [];
             state.aggregatedResult = [];
-            state.removeDuplicates = false;
-            dedupeCheckbox.checked = false;
             
             if (state.chartInstance) {
                 state.chartInstance.destroy();
