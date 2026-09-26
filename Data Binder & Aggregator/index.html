@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -139,7 +140,7 @@
         <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         系統功能與上傳說明
       </h2>
-      <p id="desc-text">本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、柏拉圖分析及空白表格匯出功能。</p>
+      <p id="desc-text">本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、80/20 柏拉圖分析及空白表格匯出功能。</p>
     </div>
 
     <!-- Step 1: 檔案選擇 -->
@@ -172,17 +173,17 @@
         </div>
         
         <div class="config-grid">
-          <!-- 時間變數 -->
+          <!-- 時間變數 (僅列出符合時間格式/名稱的欄位) -->
           <div class="form-group">
             <label id="lbl-time-col">時間/日期變數 (趨勢圖 X 軸):</label>
-            <select id="select-time-col" class="form-select" onchange="renderAll()"></select>
+            <select id="select-time-col" class="form-select" onchange="onRoleVariableChange()"></select>
           </div>
           <!-- 分類變數 -->
           <div class="form-group">
             <label id="lbl-group-col">主要分類變數 (圓餅圖/柏拉圖/表格分析欄位):</label>
-            <select id="select-group-col" class="form-select" onchange="renderAll()"></select>
+            <select id="select-group-col" class="form-select" onchange="onRoleVariableChange()"></select>
           </div>
-          <!-- 多選動態過濾器欄位選擇區 -->
+          <!-- 多選動態過濾器欄位選擇區 (已選擇角色者會隱藏) -->
           <div class="form-group" style="grid-column: span 1 / -1;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.2rem;">
               <label id="lbl-filter-var">選擇動態過濾器欄位 (可多選，預設不選擇):</label>
@@ -261,11 +262,11 @@
         </div>
       </div>
 
-      <!-- 圖表區 2: 柏拉圖 (Pareto Chart) -->
+      <!-- 圖表區 2: 80/20 柏拉圖 (Pareto Chart) -->
       <div class="charts-row-2">
         <div class="card">
           <div class="card-title">
-            <span class="card-title-text" id="chart-pareto-title">不良柏拉圖 (Pareto Chart 80/20 Rule)</span>
+            <span class="card-title-text" id="chart-pareto-title">不良柏拉圖 (Pareto Chart - 80/20 法則)</span>
           </div>
           <div class="chart-box" style="height: 350px;">
             <canvas id="paretoChart"></canvas>
@@ -321,7 +322,7 @@
       zh: {
         navTitle: "維修與不良數據分析系統",
         descTitle: "系統功能與上傳說明",
-        descText: "本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、柏拉圖分析及空白表格匯出功能。",
+        descText: "本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、80/20 柏拉圖分析及空白表格匯出功能。",
         step1Title: "選擇或拖曳數據檔案 (多檔合併 binds_row)",
         dropzoneText: "點擊或將多個 CSV / Excel / JSON 檔案拖曳至此處",
         dropzoneSubtext: "合併時將自動清除完全相同的重複列資料 (Auto-Deduplicated)",
@@ -337,7 +338,7 @@
         kpiCategories: "分類項目類別數",
         chartTrend: "時間趨勢分析圖 (Trend Chart)",
         chartPie: "分類占比圓餅圖 (Pie Chart)",
-        chartPareto: "不良柏拉圖 (Pareto Chart 80/20 Rule)",
+        chartPareto: "不良柏拉圖 (Pareto Chart - 80/20 法則)",
         lblTimeScale: "時間單位：",
         lblTopN: "顯示數量：",
         step3Title: "分析與不良對策表 (表格輸出)",
@@ -359,7 +360,7 @@
       en: {
         navTitle: "Repair & Defect Data Analysis System",
         descTitle: "System Function & Instructions",
-        descText: "Designed for engineering and QA teams to analyze repair records and defect data. Upload raw files (CSV, Excel, JSON) with 'Date/Time', 'Model/Line', 'Defect Phenomenon', etc. The system auto-merges, deduplicates, and provides searchable cascading filtering, ordering, trend analysis, Pareto charts, and exportable action tables.",
+        descText: "Designed for engineering and QA teams to analyze repair records and defect data. Upload raw files (CSV, Excel, JSON) with 'Date/Time', 'Model/Line', 'Defect Phenomenon', etc. The system auto-merges, deduplicates, and provides searchable cascading filtering, ordering, trend analysis, 80/20 Pareto charts, and exportable action tables.",
         step1Title: "Select or Drop Data Files (binds_row)",
         dropzoneText: "Click or drag multiple CSV / Excel / JSON files here",
         dropzoneSubtext: "Fully identical duplicate rows will be automatically removed",
@@ -559,43 +560,110 @@
       return result;
     }
 
+    // 判斷某個欄位名稱或樣本資料是否像「時間/日期」格式
+    function isTimeColumn(colName, sampleValue) {
+      if (/date|time|日期|時間|年份|月份|月|日|year|month|day/i.test(colName)) return true;
+      if (sampleValue && typeof sampleValue === 'string') {
+        if (!isNaN(Date.parse(sampleValue)) && sampleValue.length >= 8 && /\d/.test(sampleValue)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     // 初始化選單欄位
     function initVariableSelectors() {
       if (rawMergedData.length === 0) return;
       const keys = Object.keys(rawMergedData[0]);
+      const firstRow = rawMergedData[0];
 
-      const selectTime = document.getElementById('select-time-col');
-      const selectGroup = document.getElementById('select-group-col');
-      const filterVarsContainer = document.getElementById('filter-vars-checkbox-group');
-
-      selectTime.innerHTML = '';
-      selectGroup.innerHTML = '';
-      filterVarsContainer.innerHTML = '';
       selectedFilterKeysOrder = [];
       activeFilterValues = {};
       filterSearchTerms = {};
 
-      keys.forEach((key) => {
-        selectTime.add(new Option(key, key));
-        selectGroup.add(new Option(key, key));
+      // 需求 2：時間選單「只提供」時間/日期特徵欄位
+      const timeCandidates = keys.filter(k => isTimeColumn(k, firstRow[k]));
+      // 若萬一無符合特徵的欄位，fallback 列出全部
+      const timeKeys = timeCandidates.length > 0 ? timeCandidates : keys;
+
+      const selectTime = document.getElementById('select-time-col');
+      selectTime.innerHTML = '';
+      timeKeys.forEach(k => selectTime.add(new Option(k, k)));
+
+      // 預設時間欄位
+      let defaultTime = timeKeys.find(k => /date|time|日期|時間/i.test(k)) || timeKeys[0];
+      selectTime.value = defaultTime;
+
+      // 預設主要分類欄位（不包含時間欄位）
+      const groupCandidates = keys.filter(k => k !== defaultTime);
+      let defaultGroup = groupCandidates.find(k => /defect|reason|model|不良|原因|機種/i.test(k)) || groupCandidates[0];
+
+      // 渲染主要分類下拉選單
+      updateGroupSelectOptions(keys, defaultTime, defaultGroup);
+
+      // 渲染動態過濾器選購清單（互斥隱藏已選角色）
+      renderDynamicFilterCheckboxes(keys);
+      renderFilterGrid();
+    }
+
+    // 更新主要分類下拉選單（自動剔除當前時間欄位）
+    function updateGroupSelectOptions(allKeys, timeColVal, currentGroupVal) {
+      const selectGroup = document.getElementById('select-group-col');
+      selectGroup.innerHTML = '';
+
+      allKeys.filter(k => k !== timeColVal).forEach(k => {
+        selectGroup.add(new Option(k, k));
       });
 
-      // 智慧預設挑選時間與分類欄位
-      let defaultTime = keys.find(k => /date|time|日期|時間/i.test(k)) || keys[0];
-      let defaultGroup = keys.find(k => /defect|reason|model|不良|原因|機種/i.test(k)) || (keys[1] || keys[0]);
+      if (currentGroupVal && currentGroupVal !== timeColVal && allKeys.includes(currentGroupVal)) {
+        selectGroup.value = currentGroupVal;
+      } else {
+        selectGroup.value = selectGroup.options[0] ? selectGroup.options[0].value : "";
+      }
+    }
 
-      selectTime.value = defaultTime;
-      selectGroup.value = defaultGroup;
+    // 當時間或主要分類變數角色改變時
+    function onRoleVariableChange() {
+      const allKeys = Object.keys(rawMergedData[0] || {});
+      const timeCol = document.getElementById('select-time-col').value;
+      let groupCol = document.getElementById('select-group-col').value;
 
-      // 渲染動態過濾器選擇複選框 (預設不選擇，全部 unchecked)
-      keys.forEach(key => {
+      // 如果時間變數與分類變數相同，重新指定分類變數
+      if (timeCol === groupCol) {
+        updateGroupSelectOptions(allKeys, timeCol, "");
+        groupCol = document.getElementById('select-group-col').value;
+      } else {
+        updateGroupSelectOptions(allKeys, timeCol, groupCol);
+      }
+
+      // 需求 3：如果原本被選為動態過濾器的欄位變成了時間或主要分類，自動清除
+      selectedFilterKeysOrder = selectedFilterKeysOrder.filter(k => k !== timeCol && k !== groupCol);
+      delete activeFilterValues[timeCol];
+      delete activeFilterValues[groupCol];
+
+      renderDynamicFilterCheckboxes(allKeys);
+      renderFilterGrid();
+      renderAll();
+    }
+
+    // 需求 3：動態過濾器欄位不出現時間變數與主要分類變數（互斥出現一次）
+    function renderDynamicFilterCheckboxes(allKeys) {
+      const timeCol = document.getElementById('select-time-col').value;
+      const groupCol = document.getElementById('select-group-col').value;
+      const container = document.getElementById('filter-vars-checkbox-group');
+      container.innerHTML = '';
+
+      // 過濾掉時間變數與主要分類變數
+      const availableFilterKeys = allKeys.filter(k => k !== timeCol && k !== groupCol);
+
+      availableFilterKeys.forEach(key => {
         const label = document.createElement('label');
         label.className = 'checkbox-item';
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = key;
-        checkbox.checked = false; // 預設皆不打勾
+        checkbox.checked = selectedFilterKeysOrder.includes(key);
 
         checkbox.addEventListener('change', (e) => {
           if (e.target.checked) {
@@ -603,22 +671,18 @@
               selectedFilterKeysOrder.push(key);
             }
           } else {
-            // 當取消勾選某欄位時，移除該欄位的順序、篩選值與搜尋紀錄
             selectedFilterKeysOrder = selectedFilterKeysOrder.filter(k => k !== key);
             delete activeFilterValues[key];
             delete filterSearchTerms[key];
           }
-          // 重新繪製條件面板並更新所有圖表與表格
           renderFilterGrid();
           renderAll();
         });
 
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(key));
-        filterVarsContainer.appendChild(label);
+        container.appendChild(label);
       });
-
-      renderFilterGrid();
     }
 
     // 調整過濾面板卡片順序 (Left / Right)
@@ -631,7 +695,7 @@
       selectedFilterKeysOrder[targetIndex] = temp;
 
       renderFilterGrid();
-      renderAll(); // 順序調整會同步更新表格欄位順序與數據
+      renderAll();
     }
 
     // 取得除去特定欄位後的暫存過濾資料（用於計算該欄位「當前可選」的有效範圍）
@@ -650,7 +714,7 @@
       });
     }
 
-    // 依據勾選欄位順序，動態產生「支援多選、文字搜尋與順序調整」的條件選單
+    // 依據勾選欄位順序，動態產生條件選單
     function renderFilterGrid() {
       const grid = document.getElementById('filter-grid');
       grid.innerHTML = '';
@@ -661,19 +725,14 @@
       }
 
       selectedFilterKeysOrder.forEach((key, index) => {
-        // 1. 取得剔除本欄位條件後的其他有效資料範圍
         const scopeData = getFilteredDataExcept(key);
-
-        // 2. 提取不重複選項值
         const availableValues = Array.from(new Set(scopeData.map(r => String(r[key]))))
                                      .filter(v => v !== undefined && v !== "" && v !== "null")
                                      .sort();
 
-        // 卡片外框
         const card = document.createElement('div');
         card.className = 'filter-card';
 
-        // 標題與操作按鈕區
         const header = document.createElement('div');
         header.className = 'filter-card-header';
         
@@ -693,7 +752,6 @@
           countBadge.innerText = i18n[currentLang].allOptions;
         }
 
-        // 順序調整按鈕
         const orderGroup = document.createElement('div');
         orderGroup.className = 'order-btn-group';
 
@@ -721,7 +779,6 @@
         header.appendChild(rightBox);
         card.appendChild(header);
 
-        // 關鍵字搜尋輸入框
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'filter-search-input';
@@ -735,7 +792,6 @@
 
         card.appendChild(searchInput);
 
-        // 多選可滾動區
         const selectBox = document.createElement('div');
         selectBox.className = 'multi-select-box';
 
@@ -797,7 +853,7 @@
       });
     }
 
-    // 重設動態過濾器欄位 (取消勾選所有欄位)
+    // 重設動態過濾器欄位
     function resetFilterVariables() {
       selectedFilterKeysOrder = [];
       activeFilterValues = {};
@@ -850,7 +906,7 @@
       const uniqueCats = new Set(filteredData.map(r => r[groupCol])).size;
       document.getElementById('kpi-categories-val').innerText = uniqueCats;
 
-      // 2. 渲染趨勢圖、圓餅圖、柏拉圖
+      // 2. 渲染趨勢圖、圓餅圖、80/20 柏拉圖
       renderTrendChart(filteredData, timeCol);
       renderPieChart(filteredData, groupCol);
       renderParetoChart(filteredData, groupCol);
@@ -1002,7 +1058,7 @@
       });
     }
 
-    // 3. 柏拉圖 (Pareto Chart - Count + Cum %)
+    // 3. 需求 1：80/20 柏拉圖 (Pareto Chart - 累計達 80% 歸為主要，其餘歸為「其他」)
     function renderParetoChart(data, groupCol) {
       const groupMap = new Map();
       data.forEach(row => {
@@ -1013,11 +1069,36 @@
       const sorted = Array.from(groupMap.entries()).sort((a, b) => b[1] - a[1]);
       const totalCount = data.length;
 
-      const labels = sorted.map(item => item[0]);
-      const counts = sorted.map(item => item[1]);
+      // 80/20 法則分組邏輯
+      let primaryItems = [];
+      let otherSum = 0;
+      let tempCumSum = 0;
 
+      for (let i = 0; i < sorted.length; i++) {
+        const [label, count] = sorted[i];
+        // 算出加上當前項目後的累積百分比
+        const currentCumPct = ((tempCumSum + count) / totalCount) * 100;
+
+        if (tempCumSum / totalCount < 0.8 || primaryItems.length === 0) {
+          primaryItems.push([label, count]);
+          tempCumSum += count;
+        } else {
+          // 超過 80% 門檻的所有次要項目合併至「其他」
+          otherSum += count;
+        }
+      }
+
+      const finalLabels = primaryItems.map(item => item[0]);
+      const finalCounts = primaryItems.map(item => item[1]);
+
+      if (otherSum > 0) {
+        finalLabels.push(i18n[currentLang].otherLabel);
+        finalCounts.push(otherSum);
+      }
+
+      // 重新計算合併後的累積百分比
       let cumulativeSum = 0;
-      const cumPercentages = counts.map(count => {
+      const cumPercentages = finalCounts.map(count => {
         cumulativeSum += count;
         return totalCount > 0 ? parseFloat(((cumulativeSum / totalCount) * 100).toFixed(1)) : 0;
       });
@@ -1027,7 +1108,7 @@
       paretoChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: labels,
+          labels: finalLabels,
           datasets: [
             {
               type: 'line',
@@ -1042,7 +1123,7 @@
             {
               type: 'bar',
               label: i18n[currentLang].colCount,
-              data: counts,
+              data: finalCounts,
               backgroundColor: '#2563eb',
               yAxisID: 'yCount'
             }
@@ -1084,10 +1165,8 @@
 
       const txt = i18n[currentLang];
 
-      // 取得當前勾選的動態欄位（不包含主要分類欄位以避免重複）
       const extraFilterCols = selectedFilterKeysOrder.filter(k => k !== groupCol);
 
-      // 表頭順序：[勾選的動態欄位...] -> [主要分類欄位] -> Count -> 原因分析(空白) -> 對策(空白) -> 負責人(空白) -> 預計完成日(空白)
       const headers = [
         ...extraFilterCols,
         groupCol,
@@ -1104,7 +1183,6 @@
         headerTr.appendChild(th);
       });
 
-      // 根據包含動態欄位 + 主要分類欄位做複合鍵聚合
       const groupMap = new Map();
 
       data.forEach(row => {
@@ -1118,7 +1196,6 @@
         groupMap.set(stringifiedKey, (groupMap.get(stringifiedKey) || 0) + 1);
       });
 
-      // 排序（依 Count 數量降冪）
       const sorted = Array.from(groupMap.entries()).sort((a, b) => b[1] - a[1]);
 
       if (sorted.length === 0) {
@@ -1135,12 +1212,10 @@
 
         let rowHtml = "";
         
-        // 渲染動態欄位值
         extraFilterCols.forEach(col => {
           rowHtml += `<td style="color:#475569;">${keyObj[col]}</td>`;
         });
 
-        // 渲染主要分類欄位值與 Count
         rowHtml += `
           <td style="font-weight:600; color:#1e293b;">${keyObj[groupCol]}</td>
           <td><span class="badge" style="background:#dbeafe; color:#1e40af; font-size:0.85rem;">${count}</span></td>
@@ -1155,7 +1230,7 @@
       });
     }
 
-    // 匯出 Excel（同步包含動態選擇的過濾欄位）
+    // 匯出 Excel
     function exportToExcel() {
       const groupCol = document.getElementById('select-group-col').value;
       const filteredData = getFilteredData();
@@ -1163,7 +1238,6 @@
 
       const extraFilterCols = selectedFilterKeysOrder.filter(k => k !== groupCol);
 
-      // 建立包含動態過濾欄位與空白對策的報表
       const groupMap = new Map();
       filteredData.forEach(row => {
         const keyObj = {};
@@ -1182,12 +1256,10 @@
           const keyObj = JSON.parse(jsonKey);
           const rowObj = {};
 
-          // 動態過濾欄位
           extraFilterCols.forEach(col => {
             rowObj[col] = keyObj[col];
           });
 
-          // 分類欄位與對策空白項目
           rowObj[groupCol] = keyObj[groupCol];
           rowObj[txt.colCount] = count;
           rowObj[txt.colRootCause] = ""; // 保持空白供線下填寫
