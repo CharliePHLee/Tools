@@ -1,1632 +1,1216 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>多檔案資料合併與變數計數工具 (Data Binder & Aggregator)</title>
-    
-    <!-- Local / Lightweight Data Parsing & Chart Libraries -->
-    <!-- PapaParse for fast CSV parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <!-- SheetJS for Excel files (.xlsx, .xls) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Chart.js for data visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <style>
-        /* Modern Native CSS Design Token & Resets */
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --primary-light: #eff6ff;
-            --primary-border: #bfdbfe;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --bg-body: #f8fafc;
-            --bg-card: #ffffff;
-            --bg-subtle: #f1f5f9;
-            --border: #e2e8f0;
-            --radius-lg: 12px;
-            --radius: 8px;
-            --radius-sm: 6px;
-            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: var(--font-family);
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            line-height: 1.5;
-        }
-
-        /* Utility Classes */
-        .hidden { display: none !important; }
-        .flex { display: flex; }
-        .flex-col { flex-direction: column; }
-        .items-center { align-items: center; }
-        .justify-between { justify-content: space-between; }
-        .justify-center { justify-content: center; }
-        .gap-1 { gap: 0.25rem; }
-        .gap-2 { gap: 0.5rem; }
-        .gap-3 { gap: 0.75rem; }
-        .gap-4 { gap: 1rem; }
-        .gap-6 { gap: 1.5rem; }
-        .grow { flex-grow: 1; }
-        .w-full { width: 100%; }
-
-        /* Custom Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: var(--bg-subtle); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* Header Bar */
-        header {
-            background-color: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            box-shadow: var(--shadow);
-        }
-
-        .header-container {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 0.75rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .logo-box {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .logo-icon {
-            background-color: var(--primary);
-            color: white;
-            padding: 0.5rem;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .app-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--text-main);
-            line-height: 1.25;
-        }
-
-        .app-subtitle {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        /* Header Controls */
-        .lang-switcher {
-            display: flex;
-            background-color: var(--bg-subtle);
-            padding: 0.25rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            gap: 0.25rem;
-        }
-
-        .lang-btn {
-            border: none;
-            background: transparent;
-            font-size: 0.75rem;
-            padding: 0.25rem 0.625rem;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            color: var(--text-muted);
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .lang-btn.active {
-            background-color: var(--bg-card);
-            color: var(--primary);
-            font-weight: 700;
-            box-shadow: var(--shadow);
-        }
-
-        /* Main Container */
-        main {
-            max-width: 1280px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            flex: 1;
-        }
-
-        /* Card Section */
-        .card {
-            background-color: var(--bg-card);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-            box-shadow: var(--shadow);
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-        }
-
-        .step-badge {
-            width: 1.75rem;
-            height: 1.75rem;
-            border-radius: 50%;
-            background-color: var(--primary-light);
-            color: var(--primary);
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            flex-shrink: 0;
-        }
-
-        .section-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        /* Dropzone */
-        .dropzone {
-            border: 2px dashed #cbd5e1;
-            background-color: var(--bg-body);
-            border-radius: var(--radius-lg);
-            padding: 2.5rem 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-        }
-
-        .dropzone:hover, .dropzone.dragover {
-            border-color: var(--primary);
-            background-color: var(--primary-light);
-        }
-
-        .dropzone-icon {
-            width: 3rem;
-            height: 3rem;
-            border-radius: 50%;
-            background-color: white;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            box-shadow: var(--shadow);
-        }
-
-        .dropzone:hover .dropzone-icon {
-            color: var(--primary);
-            transform: scale(1.05);
-        }
-
-        .dropzone-text {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-main);
-        }
-
-        .dropzone-subtext {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        /* File Cards Grid */
-        .file-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.625rem 0.75rem;
-            background-color: var(--bg-body);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            font-size: 0.75rem;
-        }
-
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            overflow: hidden;
-        }
-
-        .file-name {
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 140px;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .stat-card {
-            background-color: var(--bg-body);
-            border: 1px solid var(--border);
-            padding: 0.75rem 1rem;
-            border-radius: var(--radius);
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            display: block;
-        }
-
-        .stat-value {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        /* Buttons & Inputs */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.375rem 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-            border-radius: var(--radius-sm);
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-        }
-
-        .btn-subtle {
-            background-color: var(--bg-subtle);
-            color: var(--text-main);
-            border-color: var(--border);
-        }
-
-        .btn-subtle:hover {
-            background-color: #e2e8f0;
-        }
-
-        .btn-brand-subtle {
-            background-color: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .btn-brand-subtle:hover {
-            background-color: var(--primary-border);
-        }
-
-        /* Toggle Switch */
-        .toggle-wrapper {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background-color: var(--bg-body);
-            padding: 0.375rem 0.75rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 34px;
-            height: 20px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #cbd5e1;
-            transition: .3s;
-            border-radius: 20px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 14px;
-            width: 14px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--primary);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(14px);
-        }
-
-        /* Column Selection Chips */
-        .chips-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            max-height: 160px;
-            overflow-y: auto;
-            padding: 0.25rem;
-        }
-
-        .chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.375rem 0.75rem;
-            border-radius: var(--radius-sm);
-            font-size: 0.75rem;
-            font-weight: 500;
-            background-color: var(--bg-subtle);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .chip:hover {
-            background-color: #e2e8f0;
-        }
-
-        .chip.selected {
-            background-color: var(--primary);
-            color: white;
-            border-color: var(--primary);
-            box-shadow: var(--shadow);
-        }
-
-        /* Data Tables */
-        .table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            max-height: 420px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.75rem;
-        }
-
-        th {
-            background-color: var(--bg-subtle);
-            color: var(--text-main);
-            font-weight: 600;
-            padding: 0.5rem 0.75rem;
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 0.5rem 0.75rem;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-main);
-            max-width: 250px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        tr:hover td {
-            background-color: var(--bg-body);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 0.5rem 0.75rem 0.5rem 2.25rem;
-            font-size: 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            background-color: var(--bg-body);
-            outline: none;
-        }
-
-        .search-input:focus {
-            border-color: var(--primary);
-            background-color: white;
-        }
-
-        /* Results Layout Grid */
-        .results-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-        }
-
-        @media (min-width: 1024px) {
-            .results-grid {
-                grid-template-columns: 7fr 5fr;
-            }
-        }
-
-        /* Modal Overlay */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(4px);
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .modal-card {
-            background-color: white;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .progress-bar {
-            width: 100%;
-            background-color: var(--bg-subtle);
-            height: 10px;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background-color: var(--primary);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        /* Toast Container */
-        .toast-container {
-            position: fixed;
-            bottom: 1.25rem;
-            right: 1.25rem;
-            z-index: 60;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            pointer-events: none;
-        }
-
-        .toast {
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.625rem 1rem;
-            border-radius: var(--radius);
-            background-color: #0f172a;
-            color: white;
-            font-size: 0.75rem;
-            font-weight: 500;
-            box-shadow: var(--shadow-lg);
-            transition: all 0.3s ease;
-        }
-
-        /* Spinner animation */
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>維修與不良數據分析系統 (Repair & Defect Analysis System)</title>
+
+  <!-- 第三方函式庫 (均可在無網際網路環境運行或替換為本機檔案) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg-slate: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: var(--bg-slate); color: var(--text-main); line-height: 1.5; padding-bottom: 60px; }
+
+    .header { background: #1e293b; color: white; padding: 1.25rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); }
+    .header h1 { font-size: 1.35rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+    .lang-btn { background: #334155; color: white; border: 1px solid #475569; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; }
+    .lang-btn:hover { background: #475569; }
+
+    .container { max-width: 1400px; margin: 1.5rem auto; padding: 0 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* 頂部系統說明卡片 */
+    .banner-card { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 5px solid var(--primary); border-radius: var(--radius); padding: 1.25rem 1.5rem; color: #1e40af; box-shadow: var(--shadow); }
+    .banner-card h2 { font-size: 1.1rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; }
+    .banner-card p { font-size: 0.9rem; color: #1e3a8a; opacity: 0.9; }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: #334155; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; }
+    .card-title-text { display: flex; align-items: center; gap: 0.5rem; }
+
+    /* 上傳區 */
+    .dropzone { border: 2px dashed #cbd5e1; border-radius: var(--radius); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+    .dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: #eff6ff; }
+    .btn-primary { background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: background 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: background 0.2s; white-space: nowrap; }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    /* 控制網格 */
+    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 0.5rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group label { font-size: 0.85rem; font-weight: 600; color: #475569; }
+    .form-select, .form-input { padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; width: 100%; outline: none; background: white; }
+    .form-select:focus, .form-input:focus { border-color: var(--primary); }
+
+    /* 多選複選框容器 */
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 0.5rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.6rem; max-height: 120px; overflow-y: auto; }
+    .checkbox-item { display: inline-flex; align-items: center; gap: 0.35rem; background: white; border: 1px solid #e2e8f0; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.82rem; cursor: pointer; user-select: none; }
+    .checkbox-item:hover { border-color: var(--primary); }
+    .checkbox-item input { cursor: pointer; }
+
+    /* 動態條件過濾器面板 */
+    .filter-panel { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top: 0.75rem; }
+    .filter-card { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
+    .filter-card-header { display: flex; justify-content: space-between; align-items: center; }
+    .filter-card-title { font-size: 0.85rem; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 0.4rem; }
+    .filter-card-count { font-size: 0.75rem; color: var(--primary); font-weight: 600; }
+
+    /* 順序微調按鈕組 */
+    .order-btn-group { display: flex; gap: 0.2rem; }
+    .btn-order { background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; border-radius: 4px; padding: 0.1rem 0.4rem; font-size: 0.75rem; cursor: pointer; }
+    .btn-order:hover { background: #e2e8f0; color: var(--primary); }
+
+    /* 關鍵字搜尋輸入框 */
+    .filter-search-input { padding: 0.35rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; width: 100%; outline: none; }
+    .filter-search-input:focus { border-color: var(--primary); }
+
+    /* 多選可滾動選單區 */
+    .multi-select-box { border: 1px solid #cbd5e1; border-radius: 6px; background: white; padding: 0.4rem; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.25rem; }
+    .multi-select-opt { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #334155; cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; }
+    .multi-select-opt:hover { background-color: #f1f5f9; }
+    .multi-select-opt input { cursor: pointer; }
+
+    /* KPI 卡片 */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .kpi-card { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; text-align: center; }
+    .kpi-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); margin-top: 0.2rem; }
+
+    /* 圖表佈局 */
+    .charts-row-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+    .charts-row-2 { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+    @media (max-width: 992px) { .charts-row-1 { grid-template-columns: 1fr; } }
+    .chart-box { position: relative; height: 320px; width: 100%; }
+
+    /* 表格區 */
+    .table-wrapper { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; max-height: 500px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
+    th { background: #f1f5f9; padding: 0.75rem 1rem; font-weight: 600; color: #334155; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border-color); white-space: nowrap; }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+    tr:hover { background-color: #f8fafc; }
+
+    /* 進度條彈窗 */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal { background: white; padding: 2rem; border-radius: var(--radius); width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .progress-bar-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin: 1rem 0; }
+    .progress-bar-fill { background: var(--primary); height: 100%; width: 0%; transition: width 0.2s; }
+
+    /* 隱藏與標籤 */
+    .hidden { display: none !important; }
+    .badge { background: #e0e7ff; color: #3730a3; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; }
+  </style>
 </head>
 <body>
 
-    <!-- Header Section -->
-    <header>
-        <div class="header-container">
-            <div class="logo-box">
-                <div class="logo-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 12.5-8.58 3.91a2 2 0 0 1-1.66 0L3.18 12.5"/><path d="m22 17.5-8.58 3.91a2 2 0 0 1-1.66 0L3.18 17.5"/></svg>
-                </div>
-                <div>
-                    <h1 id="appTitle" class="app-title">資料合併與多維度計數分析工具</h1>
-                    <p id="appSubTitle" class="app-subtitle">本機處理 (Client-side) ‧ 檔案免上傳 ‧ 安全快速</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <!-- Language Switcher -->
-                <div class="lang-switcher">
-                    <button id="langZhBtn" class="lang-btn active">繁體中文</button>
-                    <button id="langEnBtn" class="lang-btn">English</button>
-                </div>
+  <!-- Header -->
+  <div class="header">
+    <h1>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <span id="nav-title">維修與不良數據分析系統</span>
+    </h1>
+    <button class="lang-btn" onclick="toggleLanguage()" id="lang-btn">English</button>
+  </div>
 
-                <button id="resetAllBtn" class="btn btn-subtle">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                    <span id="resetBtnText">重置資料</span>
-                </button>
-            </div>
-        </div>
-    </header>
+  <div class="container">
 
-    <!-- Main Content Container -->
-    <main>
-
-        <!-- Step 1: File Drop Zone -->
-        <section class="card">
-            <div class="section-header">
-                <div class="flex items-center gap-2">
-                    <span class="step-badge">1</span>
-                    <h2 id="step1Title" class="section-title">選擇或拖曳本機檔案 (支援 CSV, Excel, JSON)</h2>
-                </div>
-                <span id="fileCounterBadge" class="hidden" style="font-size: 0.75rem; background: var(--bg-subtle); padding: 0.25rem 0.625rem; border-radius: 12px; font-weight: 500;">已載入 0 個檔案</span>
-            </div>
-
-            <!-- Drag & Drop Box -->
-            <div id="dropZone" class="dropzone">
-                <input type="file" id="fileInput" multiple accept=".csv, .xlsx, .xls, .json" class="hidden" />
-                <div class="dropzone-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
-                </div>
-                <div>
-                    <p id="dropText" class="dropzone-text">點擊選擇檔案，或將多個檔案拖曳至此處</p>
-                    <p id="dropSubText" class="dropzone-subtext">支援 .csv, .xlsx, .xls, .json（可同時選取多個檔案進行 binds_row 合併）</p>
-                </div>
-            </div>
-
-            <!-- Uploaded Files List -->
-            <div id="fileListContainer" class="hidden" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                <p id="uploadedListText" style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">已選擇的檔案列表：</p>
-                <div id="fileList" class="file-grid">
-                    <!-- Dynamic File Cards inserted by JS -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Step 2: Bind Summary -->
-        <section id="bindSummarySection" class="card hidden">
-            <div class="section-header">
-                <div class="flex items-center gap-2">
-                    <span class="step-badge">2</span>
-                    <h2 id="step2Title" class="section-title">資料合併結果概覽 (binds_row)</h2>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button id="toggleRawDataBtn" class="btn btn-brand-subtle">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
-                        <span id="toggleRawDataText">檢視合併後原始資料表</span>
-                    </button>
-                    <button id="exportRawBtn" class="btn btn-subtle">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                        <span id="exportRawBtnText">匯出合併 raw CSV</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Stats Bar -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <span id="statLabelRows" class="stat-label">總合併列數 (Total Rows)</span>
-                    <span id="statTotalRows" class="stat-value">0</span>
-                </div>
-                <div class="stat-card">
-                    <span id="statLabelCols" class="stat-label">總欄位數 (Total Columns)</span>
-                    <span id="statTotalCols" class="stat-value">0</span>
-                </div>
-                <div class="stat-card">
-                    <span id="statLabelFiles" class="stat-label">來源檔案數 (Files Count)</span>
-                    <span id="statFileCount" class="stat-value">0</span>
-                </div>
-                <div class="stat-card">
-                    <span id="statLabelTag" class="stat-label">自動加入標籤欄位</span>
-                    <span style="font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-top: 0.25rem; display: block;" title="_source_file">_source_file</span>
-                </div>
-            </div>
-
-            <!-- Collapsible Preview Table for Raw Bound Data -->
-            <div id="rawDataContainer" class="hidden" style="margin-top: 1rem; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;">
-                <div class="flex items-center justify-between" style="padding: 0.75rem 1rem; background-color: var(--bg-subtle); border-bottom: 1px solid var(--border);">
-                    <span id="rawPreviewHeader" style="font-size: 0.75rem; font-weight: 500; color: var(--text-muted);">合併資料預覽 (顯示前 50 筆)</span>
-                    <span id="rawDataCountBadge" style="font-size: 0.75rem; color: var(--text-muted);"></span>
-                </div>
-                <div class="table-wrapper custom-scrollbar">
-                    <table>
-                        <thead id="rawTableHeader">
-                            <!-- Headers inserted by JS -->
-                        </thead>
-                        <tbody id="rawTableBody">
-                            <!-- Rows inserted by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- Step 3: Group By Selection -->
-        <section id="aggregationSection" class="card hidden">
-            <div class="section-header" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
-                <div class="flex items-center gap-2">
-                    <span class="step-badge">3</span>
-                    <div>
-                        <h2 id="step3Title" class="section-title">選擇變數進行 Group Count</h2>
-                        <p id="step3SubTitle" style="font-size: 0.75rem; color: var(--text-muted);">點擊選擇一或多個欄位作為分組依據，進行計數與資料聚合分析</p>
-                    </div>
-                </div>
-
-                <!-- Aggregation Controls -->
-                <div class="flex items-center gap-2">
-                    <label class="toggle-wrapper">
-                        <span class="switch">
-                            <input type="checkbox" id="includeEmptyCheckbox" checked>
-                            <span class="slider"></span>
-                        </span>
-                        <span id="includeEmptyLabel">包含缺失值 (NA/空值)</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Column Selection Chips -->
-            <div style="margin: 1rem 0;">
-                <label id="availableColsLabel" style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; display: block;">可用欄位 (點擊以分組)：</label>
-                <div id="columnSelectorChips" class="chips-container custom-scrollbar">
-                    <!-- Column Chips inserted by JS -->
-                </div>
-            </div>
-
-            <!-- Active Group Display -->
-            <div class="flex items-center justify-between" style="background-color: var(--bg-body); padding: 0.75rem 1rem; border-radius: var(--radius); border: 1px solid var(--border); flex-wrap: wrap; gap: 0.5rem;">
-                <div class="flex items-center gap-2">
-                    <span id="activeGroupLabel" style="font-size: 0.75rem; font-weight: 500; color: var(--text-muted);">目前分組變數:</span>
-                    <div id="activeGroupByTags" class="flex flex-wrap gap-1">
-                        <span style="font-size: 0.75rem; font-style: italic; color: var(--text-muted);">尚未選擇變數</span>
-                    </div>
-                </div>
-                <button id="clearSelectionBtn" style="background: none; border: none; font-size: 0.75rem; color: var(--text-muted); text-decoration: underline; cursor: pointer;">清空選擇</button>
-            </div>
-        </section>
-
-        <!-- Step 4: Group Count Results & Visualization -->
-        <section id="resultsSection" class="results-grid hidden">
-            
-            <!-- Table Container -->
-            <div class="card flex flex-col">
-                <div class="section-header">
-                    <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>
-                        <h3 id="resultTableTitle" class="section-title">計數統計結果表</h3>
-                    </div>
-                    
-                    <div class="flex items-center gap-2">
-                        <span id="groupResultCountBadge" style="font-size: 0.75rem; font-weight: 500; background: var(--primary-light); color: var(--primary); padding: 0.25rem 0.625rem; border-radius: 12px;">0 個不同組合</span>
-                        <button id="exportCountCsvBtn" class="btn btn-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                            <span id="exportCountBtnText">匯出計數表 CSV</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Search Filter Input -->
-                <div style="margin-bottom: 0.75rem; position: relative;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <input type="text" id="tableSearchInput" class="search-input" placeholder="搜尋計數結果...">
-                </div>
-
-                <!-- Dynamic Aggregated Table -->
-                <div class="table-wrapper custom-scrollbar grow">
-                    <table>
-                        <thead id="countTableHeader">
-                            <!-- Headers inserted by JS -->
-                        </thead>
-                        <tbody id="countTableBody">
-                            <!-- Result rows inserted by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Visualization Canvas -->
-            <div class="card flex flex-col justify-between">
-                <div>
-                    <div class="section-header">
-                        <div class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-                            <h3 id="chartTitle" class="section-title">Top 10 數值視覺化</h3>
-                        </div>
-                        <select id="chartTypeSelect" style="font-size: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.25rem 0.5rem; background: var(--bg-body);">
-                            <option value="bar">長條圖 (Bar)</option>
-                            <option value="doughnut">甜甜圈圖 (Doughnut)</option>
-                            <option value="pie">圓餅圖 (Pie)</option>
-                        </select>
-                    </div>
-
-                    <div style="position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center;">
-                        <canvas id="countChart"></canvas>
-                    </div>
-                </div>
-                <p id="chartSubtext" style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem;">（圖表僅顯示數量最多的前 10 個組合項目）</p>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Progress Modal Overlay -->
-    <div id="progressModal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <div class="flex items-center gap-3">
-                <div style="padding: 0.5rem; background-color: var(--primary-light); color: var(--primary); border-radius: var(--radius); display: flex;">
-                    <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                </div>
-                <div>
-                    <h3 id="progressModalTitle" style="font-weight: 700; font-size: 0.875rem;">資料讀取與合併中...</h3>
-                    <p id="progressStatusText" style="font-size: 0.75rem; color: var(--text-muted);">準備解析檔案...</p>
-                </div>
-            </div>
-            
-            <div class="progress-bar">
-                <div id="progressBarFill" class="progress-fill"></div>
-            </div>
-            
-            <div class="flex justify-between" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">
-                <span id="progressFileStep">0 / 0 檔案</span>
-                <span id="progressPercent">0%</span>
-            </div>
-        </div>
+    <!-- 頂部系統功能描述卡片 -->
+    <div class="banner-card">
+      <h2 id="desc-title">
+        <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        系統功能與上傳說明
+      </h2>
+      <p id="desc-text">本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、柏拉圖分析及空白表格匯出功能。</p>
     </div>
 
-    <!-- Floating Toast Notification System -->
-    <div id="toastContainer" class="toast-container"></div>
+    <!-- Step 1: 檔案選擇 -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-text">
+          <span class="badge">STEP 1</span>
+          <span id="step1-title">選擇或拖曳數據檔案 (多檔合併 binds_row)</span>
+        </div>
+      </div>
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" style="margin-bottom:0.5rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p id="dropzone-text" style="font-weight: 600; color: #475569;">點擊或將多個 CSV / Excel / JSON 檔案拖曳至此處</p>
+        <p id="dropzone-subtext" style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.2rem;">合併時將自動清除完全相同的重複列資料 (Auto-Deduplicated)</p>
+        <input type="file" id="file-input" multiple accept=".csv,.xlsx,.xls,.json" class="hidden" onchange="handleFileSelect(event)">
+      </div>
+      <div id="file-list-summary" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);"></div>
+    </div>
 
-    <script>
-        // Global App State
-        const state = {
-            lang: 'zh', // 'zh' or 'en'
-            uploadedFiles: [], // List of loaded file meta + rows
-            mergedRawData: [], // Combined array of objects (binds_row)
-            allColumns: [],    // Unique list of all headers across files
-            selectedGroupBy: [], // Array of column names to group by
-            aggregatedResult: [], // Output of count calculation
-            chartInstance: null,
-            includeEmptyValues: true,
-            filterSearchQuery: ""
-        };
+    <!-- 分析主區域 (上傳檔案後顯示) -->
+    <div id="main-analysis-area" class="hidden" style="display:flex; flex-direction:column; gap:1.5rem;">
+      
+      <!-- Step 2: 變數與過濾器設定 -->
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-text">
+            <span class="badge">STEP 2</span>
+            <span id="step2-title">分析變數與動態過濾器設定</span>
+          </div>
+        </div>
+        
+        <div class="config-grid">
+          <!-- 時間變數 -->
+          <div class="form-group">
+            <label id="lbl-time-col">時間/日期變數 (趨勢圖 X 軸):</label>
+            <select id="select-time-col" class="form-select" onchange="renderAll()"></select>
+          </div>
+          <!-- 分類變數 -->
+          <div class="form-group">
+            <label id="lbl-group-col">主要分類變數 (圓餅圖/柏拉圖/表格分析欄位):</label>
+            <select id="select-group-col" class="form-select" onchange="renderAll()"></select>
+          </div>
+          <!-- 多選動態過濾器欄位選擇區 -->
+          <div class="form-group" style="grid-column: span 1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.2rem;">
+              <label id="lbl-filter-var">選擇動態過濾器欄位 (可多選，預設不選擇):</label>
+              <button class="btn-secondary" onclick="resetFilterVariables()" id="btn-reset-filter-var">重設過濾欄位</button>
+            </div>
+            <div class="checkbox-group" id="filter-vars-checkbox-group">
+              <!-- 動態生成欄位複選框 -->
+            </div>
+          </div>
+        </div>
 
-        // i18n Dictionary
-        const i18n = {
-            zh: {
-                appTitle: "資料合併與多維度計數分析工具",
-                appSubTitle: "本機處理 (Client-side) ‧ 檔案免上傳 ‧ 安全快速",
-                resetBtn: "重置資料",
-                step1Title: "選擇或拖曳本機檔案 (支援 CSV, Excel, JSON)",
-                fileCountBadge: "已載入 {n} 個檔案",
-                dropText: "點擊選擇檔案，或將多個檔案拖曳至此處",
-                dropSubText: "支援 .csv, .xlsx, .xls, .json（可同時選取多個檔案進行 binds_row 合併）",
-                uploadedListText: "已選擇的檔案列表：",
-                step2Title: "資料合併結果概覽 (binds_row)",
-                toggleRawShow: "檢視合併後原始資料表",
-                toggleRawHide: "隱藏原始資料表",
-                exportRawBtnText: "匯出合併 raw CSV",
-                statLabelRows: "總合併列數 (Total Rows)",
-                statLabelCols: "總欄位數 (Total Columns)",
-                statLabelFiles: "來源檔案數 (Files Count)",
-                statLabelTag: "自動加入標籤欄位",
-                rawPreviewHeader: "合併資料預覽 (顯示前 50 筆)",
-                rawCountText: "共 {total} 列，預覽前 {count} 列",
-                step3Title: "選擇變數進行 Group Count",
-                step3SubTitle: "點擊選擇一或多個欄位作為分組依據，進行計數與資料聚合分析",
-                includeEmptyLabel: "包含缺失值 (NA/空值)",
-                availableColsLabel: "可用欄位 (點擊以分組)：",
-                activeGroupLabel: "目前分組變數:",
-                noVarSelected: "尚未選擇變數 (請從上方點選欄位)",
-                clearSelectionBtn: "清空選擇",
-                resultTableTitle: "計數統計結果表",
-                groupCountBadge: "{n} 個不同組合項目",
-                exportCountBtnText: "匯出計數表 CSV",
-                tableSearchPlaceholder: "搜尋計數結果...",
-                chartTitle: "Top 10 數值視覺化",
-                chartSubtext: "（圖表僅顯示數量最多的前 10 個組合項目）",
-                chartBar: "長條圖 (Bar)",
-                chartDoughnut: "甜甜圈圖 (Doughnut)",
-                chartPie: "圓餅圖 (Pie)",
-                naValue: "(空值/NA)",
-                noResult: "沒有符合的資料或統計結果為空",
-                progressTitle: "資料讀取與合併中...",
-                toastReset: "已重置所有資料與狀態",
-                toastDedupe: "已自動刪除完全重複列，共過濾 {n} 筆重複資料"
-            },
-            en: {
-                appTitle: "Data Binder & Multi-Variable Aggregator",
-                appSubTitle: "100% Client-side Processing ‧ No Data Uploaded ‧ Fast & Secure",
-                resetBtn: "Reset All",
-                step1Title: "1. Select or Drag Local Files (.csv, .xlsx, .json)",
-                fileCountBadge: "{n} file(s) loaded",
-                dropText: "Click to choose files or drop multiple files here",
-                dropSubText: "Supports CSV, Excel, and JSON files (performs binds_row vertical stack)",
-                uploadedListText: "Selected File List:",
-                step2Title: "2. Merged Dataset Overview (binds_row)",
-                toggleRawShow: "Show Merged Raw Data Table",
-                toggleRawHide: "Hide Raw Data Table",
-                exportRawBtnText: "Export Merged Raw CSV",
-                statLabelRows: "Total Rows",
-                statLabelCols: "Total Columns",
-                statLabelFiles: "Files Count",
-                statLabelTag: "Auto Tag Column",
-                rawPreviewHeader: "Merged Data Preview (Top 50 Rows)",
-                rawCountText: "Total {total} rows, previewing first {count}",
-                step3Title: "3. Select Variables for Group Count",
-                step3SubTitle: "Select one or multiple columns as grouping variables for aggregation and counting",
-                includeEmptyLabel: "Include Missing / NA Values",
-                availableColsLabel: "Available Fields (Click to select):",
-                activeGroupLabel: "Active Grouping Variables:",
-                noVarSelected: "No variables selected (Click fields above)",
-                clearSelectionBtn: "Clear Selection",
-                resultTableTitle: "Count Summary Table",
-                groupCountBadge: "{n} distinct combinations",
-                exportCountBtnText: "Export Summary CSV",
-                tableSearchPlaceholder: "Search results...",
-                chartTitle: "Top 10 Visualization",
-                chartSubtext: "(Displays top 10 combinations with highest counts)",
-                chartBar: "Bar Chart",
-                chartDoughnut: "Doughnut Chart",
-                chartPie: "Pie Chart",
-                naValue: "(NA / Empty)",
-                noResult: "No matching data or empty result",
-                progressTitle: "Reading & Merging Data...",
-                toastReset: "All data and state have been reset",
-                toastDedupe: "Auto-deduplicated {n} duplicate rows."
+        <!-- 動態條件過濾器面板 -->
+        <div class="filter-panel" id="filter-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <span style="font-size:0.85rem; font-weight:600; color:#475569;" id="lbl-active-filter-title">條件過濾面板 (支援搜尋選單、順序調整與自動範圍縮小)：</span>
+            <button class="btn-secondary" onclick="resetFilterValues()" id="btn-reset-filter-val">重設所有過濾條件</button>
+          </div>
+          <div class="filter-grid" id="filter-grid">
+            <!-- 動態渲染可調整順序與搜尋的多選條件區 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 統計數據 -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title" id="kpi-total-lbl">總載入數據筆數</div>
+          <div class="kpi-value" id="kpi-total-val">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title" id="kpi-filtered-lbl">當前篩選筆數</div>
+          <div class="kpi-value" style="color: var(--accent-green);" id="kpi-filtered-val">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title" id="kpi-categories-lbl">分類項目類別數</div>
+          <div class="kpi-value" style="color: var(--accent-amber);" id="kpi-categories-val">0</div>
+        </div>
+      </div>
+
+      <!-- 圖表區 1: 趨勢圖 + 圓餅圖 -->
+      <div class="charts-row-1">
+        <!-- 趨勢圖 (日/週/月切換) -->
+        <div class="card">
+          <div class="card-title">
+            <span class="card-title-text" id="chart-trend-title">時間趨勢分析圖 (Trend Chart)</span>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <label style="font-size:0.8rem; color:#64748b;" id="lbl-time-scale">時間單位：</label>
+              <select id="select-time-scale" class="form-select" style="padding:0.2rem 0.5rem; font-size:0.8rem; width:auto;" onchange="renderAll()">
+                <option value="day">日 (Day)</option>
+                <option value="week">週 (Week)</option>
+                <option value="month">月 (Month)</option>
+              </select>
+            </div>
+          </div>
+          <div class="chart-box">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 圓餅圖 (Top 5 ~ Top 10 切換) -->
+        <div class="card">
+          <div class="card-title">
+            <span class="card-title-text" id="chart-pie-title">分類占比圓餅圖 (Pie Chart)</span>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <label style="font-size:0.8rem; color:#64748b;" id="lbl-top-n">顯示數量：</label>
+              <select id="select-top-n" class="form-select" style="padding:0.2rem 0.5rem; font-size:0.8rem; width:auto;" onchange="renderAll()">
+                <option value="5">Top 5</option>
+                <option value="7">Top 7</option>
+                <option value="10">Top 10</option>
+              </select>
+            </div>
+          </div>
+          <div class="chart-box">
+            <canvas id="pieChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 圖表區 2: 柏拉圖 (Pareto Chart) -->
+      <div class="charts-row-2">
+        <div class="card">
+          <div class="card-title">
+            <span class="card-title-text" id="chart-pareto-title">不良柏拉圖 (Pareto Chart 80/20 Rule)</span>
+          </div>
+          <div class="chart-box" style="height: 350px;">
+            <canvas id="paretoChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 統計對策空白表格與匯出區 -->
+      <div class="card">
+        <div class="card-title" style="flex-wrap:wrap; gap:0.5rem;">
+          <div class="card-title-text">
+            <span class="badge">STEP 3</span>
+            <span id="step3-title">分析與不良對策表 (表格輸出)</span>
+          </div>
+          <button class="btn-primary" onclick="exportToExcel()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span id="btn-export">下載分析對策表格 (Excel)</span>
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="analysis-table">
+            <thead>
+              <tr id="table-header">
+                <!-- 動態表頭 -->
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- 動態資料列 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 進度條彈窗 -->
+  <div class="modal-overlay" id="progress-modal">
+    <div class="modal">
+      <h3 id="modal-title">正在處理與合併資料...</h3>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <p id="progress-text" style="font-size:0.85rem; color:var(--text-muted);">請稍候...</p>
+    </div>
+  </div>
+
+  <script>
+    // 多國語言語系對照表
+    const i18n = {
+      zh: {
+        navTitle: "維修與不良數據分析系統",
+        descTitle: "系統功能與上傳說明",
+        descText: "本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、柏拉圖分析及空白表格匯出功能。",
+        step1Title: "選擇或拖曳數據檔案 (多檔合併 binds_row)",
+        dropzoneText: "點擊或將多個 CSV / Excel / JSON 檔案拖曳至此處",
+        dropzoneSubtext: "合併時將自動清除完全相同的重複列資料 (Auto-Deduplicated)",
+        step2Title: "分析變數與動態過濾器設定",
+        lblTimeCol: "時間/日期變數 (趨勢圖 X 軸):",
+        lblGroupCol: "主要分類變數 (圓餅圖/柏拉圖/表格分析欄位):",
+        lblFilterVar: "選擇動態過濾器欄位 (可多選，預設不選擇):",
+        btnResetFilterVar: "重設過濾欄位",
+        lblActiveFilterTitle: "條件過濾面板 (支援搜尋選單、順序調整與自動範圍縮小)：",
+        btnResetFilterVal: "重設所有過濾條件",
+        kpiTotal: "總載入數據筆數",
+        kpiFiltered: "當前篩選筆數",
+        kpiCategories: "分類項目類別數",
+        chartTrend: "時間趨勢分析圖 (Trend Chart)",
+        chartPie: "分類占比圓餅圖 (Pie Chart)",
+        chartPareto: "不良柏拉圖 (Pareto Chart 80/20 Rule)",
+        lblTimeScale: "時間單位：",
+        lblTopN: "顯示數量：",
+        step3Title: "分析與不良對策表 (表格輸出)",
+        btnExport: "下載分析對策表格 (Excel)",
+        colCount: "發生數量 (Count)",
+        colRootCause: "原因分析 (Root Cause)",
+        colAction: "對策 (Action)",
+        colPIC: "負責人 (PIC)",
+        colDueDate: "預計完成日 (Due Date)",
+        allOptions: "全選 (All)",
+        otherLabel: "其他 (Others)",
+        cumPercentage: "累積百分比 (%)",
+        modalProcessing: "正在處理與合併資料...",
+        noData: "查無符合篩選條件的數據",
+        noFilterSelected: "尚未勾選任何過濾欄位 (使用全量數據)",
+        selectedCount: "已選擇",
+        searchPlaceholder: "輸入文字快速搜尋選項..."
+      },
+      en: {
+        navTitle: "Repair & Defect Data Analysis System",
+        descTitle: "System Function & Instructions",
+        descText: "Designed for engineering and QA teams to analyze repair records and defect data. Upload raw files (CSV, Excel, JSON) with 'Date/Time', 'Model/Line', 'Defect Phenomenon', etc. The system auto-merges, deduplicates, and provides searchable cascading filtering, ordering, trend analysis, Pareto charts, and exportable action tables.",
+        step1Title: "Select or Drop Data Files (binds_row)",
+        dropzoneText: "Click or drag multiple CSV / Excel / JSON files here",
+        dropzoneSubtext: "Fully identical duplicate rows will be automatically removed",
+        step2Title: "Variable & Dynamic Filter Configuration",
+        lblTimeCol: "Time/Date Variable (Trend X-Axis):",
+        lblGroupCol: "Main Classification Variable (Pie/Pareto/Table Field):",
+        lblFilterVar: "Select Dynamic Filter Fields (Multiple, default none):",
+        btnResetFilterVar: "Reset Filter Fields",
+        lblActiveFilterTitle: "Condition Filter Panel (Searchable, Reorderable & Cascading):",
+        btnResetFilterVal: "Reset All Filters",
+        kpiTotal: "Total Records Loaded",
+        kpiFiltered: "Filtered Records",
+        kpiCategories: "Category Count",
+        chartTrend: "Time Trend Analysis Chart",
+        chartPie: "Category Distribution (Pie Chart)",
+        chartPareto: "Pareto Chart (80/20 Rule)",
+        lblTimeScale: "Time Unit:",
+        lblTopN: "Top Items:",
+        step3Title: "Analysis & Action Plan Table (Export Template)",
+        btnExport: "Export Analysis Report (Excel)",
+        colCount: "Count",
+        colRootCause: "Root Cause",
+        colAction: "Action",
+        colPIC: "PIC",
+        colDueDate: "Due Date",
+        allOptions: "Select All",
+        otherLabel: "Others",
+        cumPercentage: "Cumulative %",
+        modalProcessing: "Processing and merging files...",
+        noData: "No data matches current filters",
+        noFilterSelected: "No filter fields selected (Using full dataset)",
+        selectedCount: "Selected",
+        searchPlaceholder: "Type to search options..."
+      }
+    };
+
+    let currentLang = 'zh';
+    let rawMergedData = []; // 合併去重後的完整原始數據
+    let selectedFilterKeysOrder = []; // 存放被選為過濾器的欄位順序陣列 [field1, field2...]
+    let activeFilterValues = {}; // 存放各過濾欄位勾選的值：{ fieldName: Set([val1, val2...]) }
+    let filterSearchTerms = {}; // 存放各過濾欄位的搜尋文字：{ fieldName: "search term" }
+
+    // Chart.js 實體控制
+    let trendChartInstance = null;
+    let pieChartInstance = null;
+    let paretoChartInstance = null;
+
+    // 拖曳上傳控制
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) processFiles(e.dataTransfer.files);
+    });
+
+    function handleFileSelect(e) {
+      if (e.target.files.length > 0) processFiles(e.target.files);
+    }
+
+    // 切換語系
+    function toggleLanguage() {
+      currentLang = currentLang === 'zh' ? 'en' : 'zh';
+      document.getElementById('lang-btn').innerText = currentLang === 'zh' ? 'English' : '繁體中文';
+      
+      const txt = i18n[currentLang];
+      document.getElementById('nav-title').innerText = txt.navTitle;
+      document.getElementById('desc-title').innerText = txt.descTitle;
+      document.getElementById('desc-text').innerText = txt.descText;
+      document.getElementById('step1-title').innerText = txt.step1Title;
+      document.getElementById('dropzone-text').innerText = txt.dropzoneText;
+      document.getElementById('dropzone-subtext').innerText = txt.dropzoneSubtext;
+      document.getElementById('step2-title').innerText = txt.step2Title;
+      document.getElementById('lbl-time-col').innerText = txt.lblTimeCol;
+      document.getElementById('lbl-group-col').innerText = txt.lblGroupCol;
+      document.getElementById('lbl-filter-var').innerText = txt.lblFilterVar;
+      document.getElementById('btn-reset-filter-var').innerText = txt.btnResetFilterVar;
+      document.getElementById('lbl-active-filter-title').innerText = txt.lblActiveFilterTitle;
+      document.getElementById('btn-reset-filter-val').innerText = txt.btnResetFilterVal;
+      document.getElementById('kpi-total-lbl').innerText = txt.kpiTotal;
+      document.getElementById('kpi-filtered-lbl').innerText = txt.kpiFiltered;
+      document.getElementById('kpi-categories-lbl').innerText = txt.kpiCategories;
+      document.getElementById('chart-trend-title').innerText = txt.chartTrend;
+      document.getElementById('chart-pie-title').innerText = txt.chartPie;
+      document.getElementById('chart-pareto-title').innerText = txt.chartPareto;
+      document.getElementById('lbl-time-scale').innerText = txt.lblTimeScale;
+      document.getElementById('lbl-top-n').innerText = txt.lblTopN;
+      document.getElementById('step3-title').innerText = txt.step3Title;
+      document.getElementById('btn-export').innerText = txt.btnExport;
+
+      if (rawMergedData.length > 0) {
+        renderFilterGrid();
+        renderAll();
+      }
+    }
+
+    // 彈窗與進度條
+    function showProgress(show, text = "", percent = 0) {
+      const modal = document.getElementById('progress-modal');
+      const fill = document.getElementById('progress-fill');
+      const pText = document.getElementById('progress-text');
+      if (show) {
+        modal.classList.add('active');
+        fill.style.width = percent + '%';
+        pText.innerText = text;
+      } else {
+        modal.classList.remove('active');
+      }
+    }
+
+    // 多檔案讀取與合併 (binds_row)
+    async function processFiles(files) {
+      showProgress(true, i18n[currentLang].modalProcessing, 10);
+      let combinedRows = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const percent = Math.round(((i + 1) / files.length) * 80);
+        showProgress(true, `${i18n[currentLang].modalProcessing} (${file.name})`, percent);
+
+        try {
+          const rows = await parseSingleFile(file);
+          combinedRows = combinedRows.concat(rows);
+        } catch (err) {
+          console.error("Parse Error:", err);
+        }
+      }
+
+      showProgress(true, "Deduplicating Rows...", 90);
+
+      // 自動清除完全重複列
+      rawMergedData = deduplicateRows(combinedRows);
+
+      showProgress(false);
+
+      if (rawMergedData.length === 0) {
+        alert("無法讀取有效的資料筆數，請確認檔案格式。");
+        return;
+      }
+
+      document.getElementById('file-list-summary').innerText = `成功匯入 ${files.length} 個檔案，合併與去重後共 ${rawMergedData.length} 筆有效數據。`;
+      document.getElementById('main-analysis-area').classList.remove('hidden');
+
+      initVariableSelectors();
+      renderAll();
+    }
+
+    // 解析單檔
+    function parseSingleFile(file) {
+      return new Promise((resolve, reject) => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'csv') {
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => resolve(results.data),
+            error: (err) => reject(err)
+          });
+        } else if (ext === 'xlsx' || ext === 'xls') {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+            resolve(jsonData);
+          };
+          reader.onerror = (err) => reject(err);
+          reader.readAsArrayBuffer(file);
+        } else if (ext === 'json') {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const jsonData = JSON.parse(e.target.result);
+              resolve(Array.isArray(jsonData) ? jsonData : [jsonData]);
+            } catch (err) { reject(err); }
+          };
+          reader.readAsText(file);
+        } else {
+          resolve([]);
+        }
+      });
+    }
+
+    // 依據 JSON 完全一致過濾重複列
+    function deduplicateRows(rows) {
+      const seen = new Set();
+      const result = [];
+      for (const row of rows) {
+        const key = JSON.stringify(row);
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push(row);
+        }
+      }
+      return result;
+    }
+
+    // 初始化選單欄位
+    function initVariableSelectors() {
+      if (rawMergedData.length === 0) return;
+      const keys = Object.keys(rawMergedData[0]);
+
+      const selectTime = document.getElementById('select-time-col');
+      const selectGroup = document.getElementById('select-group-col');
+      const filterVarsContainer = document.getElementById('filter-vars-checkbox-group');
+
+      selectTime.innerHTML = '';
+      selectGroup.innerHTML = '';
+      filterVarsContainer.innerHTML = '';
+      selectedFilterKeysOrder = [];
+      activeFilterValues = {};
+      filterSearchTerms = {};
+
+      keys.forEach((key) => {
+        selectTime.add(new Option(key, key));
+        selectGroup.add(new Option(key, key));
+      });
+
+      // 智慧預設挑選時間與分類欄位
+      let defaultTime = keys.find(k => /date|time|日期|時間/i.test(k)) || keys[0];
+      let defaultGroup = keys.find(k => /defect|reason|model|不良|原因|機種/i.test(k)) || (keys[1] || keys[0]);
+
+      selectTime.value = defaultTime;
+      selectGroup.value = defaultGroup;
+
+      // 渲染動態過濾器選擇複選框 (預設不選擇，全部 unchecked)
+      keys.forEach(key => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = key;
+        checkbox.checked = false; // 預設皆不打勾
+
+        checkbox.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            if (!selectedFilterKeysOrder.includes(key)) {
+              selectedFilterKeysOrder.push(key);
             }
-        };
-
-        // DOM Elements
-        const langZhBtn = document.getElementById('langZhBtn');
-        const langEnBtn = document.getElementById('langEnBtn');
-
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileListContainer = document.getElementById('fileListContainer');
-        const fileList = document.getElementById('fileList');
-        const fileCounterBadge = document.getElementById('fileCounterBadge');
-        const resetAllBtn = document.getElementById('resetAllBtn');
-
-        const bindSummarySection = document.getElementById('bindSummarySection');
-        const statTotalRows = document.getElementById('statTotalRows');
-        const statTotalCols = document.getElementById('statTotalCols');
-        const statFileCount = document.getElementById('statFileCount');
-        const toggleRawDataBtn = document.getElementById('toggleRawDataBtn');
-        const toggleRawDataText = document.getElementById('toggleRawDataText');
-        const rawDataContainer = document.getElementById('rawDataContainer');
-        const rawTableHeader = document.getElementById('rawTableHeader');
-        const rawTableBody = document.getElementById('rawTableBody');
-        const rawDataCountBadge = document.getElementById('rawDataCountBadge');
-        const exportRawBtn = document.getElementById('exportRawBtn');
-
-        const aggregationSection = document.getElementById('aggregationSection');
-        const columnSelectorChips = document.getElementById('columnSelectorChips');
-        const activeGroupByTags = document.getElementById('activeGroupByTags');
-        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-        const includeEmptyCheckbox = document.getElementById('includeEmptyCheckbox');
-
-        const resultsSection = document.getElementById('resultsSection');
-        const countTableHeader = document.getElementById('countTableHeader');
-        const countTableBody = document.getElementById('countTableBody');
-        const groupResultCountBadge = document.getElementById('groupResultCountBadge');
-        const exportCountCsvBtn = document.getElementById('exportCountCsvBtn');
-        const tableSearchInput = document.getElementById('tableSearchInput');
-        const chartTypeSelect = document.getElementById('chartTypeSelect');
-
-        // Progress Modal DOM
-        const progressModal = document.getElementById('progressModal');
-        const progressModalTitle = document.getElementById('progressModalTitle');
-        const progressStatusText = document.getElementById('progressStatusText');
-        const progressBarFill = document.getElementById('progressBarFill');
-        const progressFileStep = document.getElementById('progressFileStep');
-        const progressPercent = document.getElementById('progressPercent');
-
-        window.addEventListener('DOMContentLoaded', () => {
-            initEventListeners();
-            updateLanguageUI();
+          } else {
+            // 當取消勾選某欄位時，移除該欄位的順序、篩選值與搜尋紀錄
+            selectedFilterKeysOrder = selectedFilterKeysOrder.filter(k => k !== key);
+            delete activeFilterValues[key];
+            delete filterSearchTerms[key];
+          }
+          // 重新繪製條件面板並更新所有圖表與表格
+          renderFilterGrid();
+          renderAll();
         });
 
-        function setLanguage(lang) {
-            state.lang = lang;
-            if (lang === 'zh') {
-                langZhBtn.classList.add('active');
-                langEnBtn.classList.remove('active');
-            } else {
-                langEnBtn.classList.add('active');
-                langZhBtn.classList.remove('active');
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(key));
+        filterVarsContainer.appendChild(label);
+      });
+
+      renderFilterGrid();
+    }
+
+    // 調整過濾面板卡片順序 (Left / Right)
+    function moveFilterOrder(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= selectedFilterKeysOrder.length) return;
+
+      const temp = selectedFilterKeysOrder[index];
+      selectedFilterKeysOrder[index] = selectedFilterKeysOrder[targetIndex];
+      selectedFilterKeysOrder[targetIndex] = temp;
+
+      renderFilterGrid();
+      renderAll(); // 順序調整會同步更新表格欄位順序與數據
+    }
+
+    // 取得除去特定欄位後的暫存過濾資料（用於計算該欄位「當前可選」的有效範圍）
+    function getFilteredDataExcept(excludeKey) {
+      return rawMergedData.filter(row => {
+        for (let key of selectedFilterKeysOrder) {
+          if (key === excludeKey) continue;
+          const selectedSet = activeFilterValues[key];
+          if (selectedSet && selectedSet.size > 0) {
+            if (!selectedSet.has(String(row[key]))) {
+              return false;
             }
-            updateLanguageUI();
-            if (state.uploadedFiles.length > 0) {
-                updateUI();
+          }
+        }
+        return true;
+      });
+    }
+
+    // 依據勾選欄位順序，動態產生「支援多選、文字搜尋與順序調整」的條件選單
+    function renderFilterGrid() {
+      const grid = document.getElementById('filter-grid');
+      grid.innerHTML = '';
+
+      if (selectedFilterKeysOrder.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; color:var(--text-muted); font-size:0.85rem; font-style:italic;">${i18n[currentLang].noFilterSelected}</div>`;
+        return;
+      }
+
+      selectedFilterKeysOrder.forEach((key, index) => {
+        // 1. 取得剔除本欄位條件後的其他有效資料範圍
+        const scopeData = getFilteredDataExcept(key);
+
+        // 2. 提取不重複選項值
+        const availableValues = Array.from(new Set(scopeData.map(r => String(r[key]))))
+                                     .filter(v => v !== undefined && v !== "" && v !== "null")
+                                     .sort();
+
+        // 卡片外框
+        const card = document.createElement('div');
+        card.className = 'filter-card';
+
+        // 標題與操作按鈕區
+        const header = document.createElement('div');
+        header.className = 'filter-card-header';
+        
+        const title = document.createElement('div');
+        title.className = 'filter-card-title';
+        title.innerHTML = `<span>${key}</span>`;
+
+        const rightBox = document.createElement('div');
+        rightBox.style.cssText = "display:flex; align-items:center; gap:0.5rem;";
+
+        const countBadge = document.createElement('div');
+        countBadge.className = 'filter-card-count';
+        const currentSelectedSet = activeFilterValues[key] || new Set();
+        if (currentSelectedSet.size > 0) {
+          countBadge.innerText = `${i18n[currentLang].selectedCount}: ${currentSelectedSet.size}`;
+        } else {
+          countBadge.innerText = i18n[currentLang].allOptions;
+        }
+
+        // 順序調整按鈕
+        const orderGroup = document.createElement('div');
+        orderGroup.className = 'order-btn-group';
+
+        const btnUp = document.createElement('button');
+        btnUp.className = 'btn-order';
+        btnUp.innerText = '◄';
+        btnUp.title = '向左移動順序';
+        btnUp.disabled = index === 0;
+        btnUp.onclick = () => moveFilterOrder(index, -1);
+
+        const btnDown = document.createElement('button');
+        btnDown.className = 'btn-order';
+        btnDown.innerText = '►';
+        btnDown.title = '向右移動順序';
+        btnDown.disabled = index === selectedFilterKeysOrder.length - 1;
+        btnDown.onclick = () => moveFilterOrder(index, 1);
+
+        orderGroup.appendChild(btnUp);
+        orderGroup.appendChild(btnDown);
+
+        rightBox.appendChild(countBadge);
+        rightBox.appendChild(orderGroup);
+
+        header.appendChild(title);
+        header.appendChild(rightBox);
+        card.appendChild(header);
+
+        // 關鍵字搜尋輸入框
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'filter-search-input';
+        searchInput.placeholder = i18n[currentLang].searchPlaceholder;
+        searchInput.value = filterSearchTerms[key] || '';
+
+        searchInput.addEventListener('input', (e) => {
+          filterSearchTerms[key] = e.target.value.toLowerCase();
+          updateMultiSelectBoxOptions(key, availableValues, selectBox);
+        });
+
+        card.appendChild(searchInput);
+
+        // 多選可滾動區
+        const selectBox = document.createElement('div');
+        selectBox.className = 'multi-select-box';
+
+        updateMultiSelectBoxOptions(key, availableValues, selectBox);
+
+        card.appendChild(selectBox);
+        grid.appendChild(card);
+      });
+    }
+
+    // 依據搜尋關鍵字更新多選清單選項
+    function updateMultiSelectBoxOptions(key, availableValues, selectBox) {
+      selectBox.innerHTML = '';
+      const searchTerm = (filterSearchTerms[key] || '').trim();
+      const currentSelectedSet = activeFilterValues[key] || new Set();
+
+      const filteredValues = availableValues.filter(val => 
+        val.toLowerCase().includes(searchTerm)
+      );
+
+      if (filteredValues.length === 0) {
+        selectBox.innerHTML = `<div style="font-size:0.75rem; color:#94a3b8; padding:0.2rem;">(無相符項目)</div>`;
+        return;
+      }
+
+      filteredValues.forEach(val => {
+        const optLabel = document.createElement('label');
+        optLabel.className = 'multi-select-opt';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = val;
+
+        if (currentSelectedSet.has(val)) {
+          checkbox.checked = true;
+        }
+
+        checkbox.addEventListener('change', (e) => {
+          if (!activeFilterValues[key]) {
+            activeFilterValues[key] = new Set();
+          }
+
+          if (e.target.checked) {
+            activeFilterValues[key].add(val);
+          } else {
+            activeFilterValues[key].delete(val);
+            if (activeFilterValues[key].size === 0) {
+              delete activeFilterValues[key];
             }
-        }
+          }
 
-        function updateLanguageUI() {
-            const t = i18n[state.lang];
-            document.getElementById('appTitle').textContent = t.appTitle;
-            document.getElementById('appSubTitle').textContent = t.appSubTitle;
-            document.getElementById('resetBtnText').textContent = t.resetBtn;
-            document.getElementById('step1Title').textContent = t.step1Title;
-            document.getElementById('dropText').textContent = t.dropText;
-            document.getElementById('dropSubText').textContent = t.dropSubText;
-            document.getElementById('uploadedListText').textContent = t.uploadedListText;
+          renderFilterGrid();
+          renderAll();
+        });
 
-            document.getElementById('step2Title').textContent = t.step2Title;
-            document.getElementById('exportRawBtnText').textContent = t.exportRawBtnText;
-            document.getElementById('statLabelRows').textContent = t.statLabelRows;
-            document.getElementById('statLabelCols').textContent = t.statLabelCols;
-            document.getElementById('statLabelFiles').textContent = t.statLabelFiles;
-            document.getElementById('statLabelTag').textContent = t.statLabelTag;
-            document.getElementById('rawPreviewHeader').textContent = t.rawPreviewHeader;
+        optLabel.appendChild(checkbox);
+        optLabel.appendChild(document.createTextNode(val));
+        selectBox.appendChild(optLabel);
+      });
+    }
 
-            document.getElementById('step3Title').textContent = t.step3Title;
-            document.getElementById('step3SubTitle').textContent = t.step3SubTitle;
-            document.getElementById('includeEmptyLabel').textContent = t.includeEmptyLabel;
-            document.getElementById('availableColsLabel').textContent = t.availableColsLabel;
-            document.getElementById('activeGroupLabel').textContent = t.activeGroupLabel;
-            document.getElementById('clearSelectionBtn').textContent = t.clearSelectionBtn;
+    // 重設動態過濾器欄位 (取消勾選所有欄位)
+    function resetFilterVariables() {
+      selectedFilterKeysOrder = [];
+      activeFilterValues = {};
+      filterSearchTerms = {};
 
-            document.getElementById('resultTableTitle').textContent = t.resultTableTitle;
-            document.getElementById('exportCountBtnText').textContent = t.exportCountBtnText;
-            tableSearchInput.placeholder = t.tableSearchPlaceholder;
+      const checkboxes = document.querySelectorAll('#filter-vars-checkbox-group input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = false);
 
-            document.getElementById('chartTitle').textContent = t.chartTitle;
-            document.getElementById('chartSubtext').textContent = t.chartSubtext;
-            
-            // Chart select options
-            chartTypeSelect.options[0].text = t.chartBar;
-            chartTypeSelect.options[1].text = t.chartDoughnut;
-            chartTypeSelect.options[2].text = t.chartPie;
+      renderFilterGrid();
+      renderAll();
+    }
 
-            const isHidden = rawDataContainer.classList.contains('hidden');
-            toggleRawDataText.textContent = isHidden ? t.toggleRawShow : t.toggleRawHide;
-        }
+    // 重設所有條件選擇值
+    function resetFilterValues() {
+      activeFilterValues = {};
+      filterSearchTerms = {};
+      renderFilterGrid();
+      renderAll();
+    }
 
-        function initEventListeners() {
-            langZhBtn.addEventListener('click', () => setLanguage('zh'));
-            langEnBtn.addEventListener('click', () => setLanguage('en'));
+    // 取得當前完全過濾後的數據
+    function getFilteredData() {
+      if (Object.keys(activeFilterValues).length === 0) {
+        return rawMergedData;
+      }
 
-            // Drag and drop handlers
-            dropZone.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', handleFileSelect);
-
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('dragover');
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                if (e.dataTransfer.files.length > 0) {
-                    processFiles(e.dataTransfer.files);
-                }
-            });
-
-            resetAllBtn.addEventListener('click', resetApp);
-
-            // Raw data table toggle
-            toggleRawDataBtn.addEventListener('click', () => {
-                const t = i18n[state.lang];
-                const isHidden = rawDataContainer.classList.contains('hidden');
-                if (isHidden) {
-                    rawDataContainer.classList.remove('hidden');
-                    toggleRawDataText.textContent = t.toggleRawHide;
-                } else {
-                    rawDataContainer.classList.add('hidden');
-                    toggleRawDataText.textContent = t.toggleRawShow;
-                }
-            });
-
-            // Clear column selection
-            clearSelectionBtn.addEventListener('click', () => {
-                state.selectedGroupBy = [];
-                updateColumnChipsUI();
-                computeAggregation();
-            });
-
-            // Include Empty Checkbox toggle
-            includeEmptyCheckbox.addEventListener('change', (e) => {
-                state.includeEmptyValues = e.target.checked;
-                computeAggregation();
-            });
-
-            // Search filter in results table
-            tableSearchInput.addEventListener('input', (e) => {
-                state.filterSearchQuery = e.target.value.toLowerCase().trim();
-                renderCountTable();
-            });
-
-            // Export Buttons
-            exportRawBtn.addEventListener('click', exportRawDataCSV);
-            exportCountCsvBtn.addEventListener('click', exportCountDataCSV);
-
-            // Chart Type Switcher
-            chartTypeSelect.addEventListener('change', () => {
-                renderChart();
-            });
-        }
-
-        async function handleFileSelect(e) {
-            const files = e.target.files;
-            if (files.length > 0) {
-                await processFiles(files);
-                fileInput.value = ''; // Reset input
+      return rawMergedData.filter(row => {
+        for (let key in activeFilterValues) {
+          const selectedSet = activeFilterValues[key];
+          if (selectedSet && selectedSet.size > 0) {
+            if (!selectedSet.has(String(row[key]))) {
+              return false;
             }
+          }
         }
+        return true;
+      });
+    }
 
-        async function processFiles(files) {
-            const totalFiles = files.length;
-            showProgressModal();
+    // 統一渲染主入口
+    function renderAll() {
+      const filteredData = getFilteredData();
+      const timeCol = document.getElementById('select-time-col').value;
+      const groupCol = document.getElementById('select-group-col').value;
 
-            for (let i = 0; i < totalFiles; i++) {
-                const file = files[i];
-                const percent = Math.round(((i + 1) / totalFiles) * 100);
-                
-                updateProgress(
-                    i + 1, 
-                    totalFiles, 
-                    percent, 
-                    state.lang === 'zh' ? `正在解析: ${file.name}` : `Parsing: ${file.name}`
-                );
+      // 1. 更新 KPI 數字
+      document.getElementById('kpi-total-val').innerText = rawMergedData.length.toLocaleString();
+      document.getElementById('kpi-filtered-val').innerText = filteredData.length.toLocaleString();
+      
+      const uniqueCats = new Set(filteredData.map(r => r[groupCol])).size;
+      document.getElementById('kpi-categories-val').innerText = uniqueCats;
 
-                await new Promise(r => setTimeout(r, 40));
+      // 2. 渲染趨勢圖、圓餅圖、柏拉圖
+      renderTrendChart(filteredData, timeCol);
+      renderPieChart(filteredData, groupCol);
+      renderParetoChart(filteredData, groupCol);
 
-                try {
-                    const parsedData = await parseSingleFile(file);
-                    if (parsedData && parsedData.length > 0) {
-                        state.uploadedFiles.push({
-                            id: Date.now() + Math.random(),
-                            name: file.name,
-                            size: (file.size / 1024).toFixed(1) + ' KB',
-                            rowCount: parsedData.length,
-                            rawData: parsedData
-                        });
-                    } else {
-                        showToast(state.lang === 'zh' ? `檔案 ${file.name} 為空。` : `File ${file.name} is empty.`, 'error');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    showToast(state.lang === 'zh' ? `解析 ${file.name} 失敗。` : `Failed to parse ${file.name}.`, 'error');
-                }
+      // 3. 渲染對策統計輸出表
+      renderTable(filteredData, groupCol);
+    }
+
+    // 日期格式統一處理為最小單位「天 (YYYY-MM-DD)」
+    function parseDateToDay(val) {
+      if (!val) return "Unknown";
+      let dateStr = String(val).trim();
+
+      if (dateStr.includes("T")) dateStr = dateStr.split("T")[0];
+      if (dateStr.includes(" ")) dateStr = dateStr.split(" ")[0];
+
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      return dateStr.substring(0, 10);
+    }
+
+    // 轉換日期為 週 (YYYY-Www) 或 月 (YYYY-MM)
+    function formatTimeScale(dayStr, scale) {
+      if (dayStr === "Unknown") return "Unknown";
+      if (scale === "day") return dayStr;
+
+      const d = new Date(dayStr);
+      if (isNaN(d.getTime())) return dayStr;
+
+      if (scale === "month") {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        return `${yyyy}-${mm}`;
+      } else if (scale === "week") {
+        const target = new Date(d.valueOf());
+        const dayNr = (d.getDay() + 6) % 7;
+        target.setDate(target.getDate() - dayNr + 3);
+        const firstThursday = target.valueOf();
+        target.setMonth(0, 1);
+        if (target.getDay() !== 4) {
+          target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
+        }
+        const weekNum = 1 + Math.round((firstThursday - target) / 604800000);
+        const yyyy = d.getFullYear();
+        return `${yyyy}-W${String(weekNum).padStart(2, '0')}`;
+      }
+      return dayStr;
+    }
+
+    // 1. 趨勢圖 (Trend Chart - Day / Week / Month)
+    function renderTrendChart(data, timeCol) {
+      const scale = document.getElementById('select-time-scale').value;
+      const timeMap = new Map();
+
+      data.forEach(row => {
+        const dayStr = parseDateToDay(row[timeCol]);
+        const formattedKey = formatTimeScale(dayStr, scale);
+        timeMap.set(formattedKey, (timeMap.get(formattedKey) || 0) + 1);
+      });
+
+      const sortedKeys = Array.from(timeMap.keys()).sort();
+      const values = sortedKeys.map(k => timeMap.get(k));
+
+      if (trendChartInstance) trendChartInstance.destroy();
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      trendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: sortedKeys,
+          datasets: [{
+            label: i18n[currentLang].colCount,
+            data: values,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            fill: true,
+            tension: 0.2,
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+    }
+
+    // 2. 圓餅圖 (Pie Chart - Top 5 ~ 10)
+    function renderPieChart(data, groupCol) {
+      const topN = parseInt(document.getElementById('select-top-n').value, 10);
+      const groupMap = new Map();
+
+      data.forEach(row => {
+        const val = row[groupCol] || "N/A";
+        groupMap.set(val, (groupMap.get(val) || 0) + 1);
+      });
+
+      const sorted = Array.from(groupMap.entries()).sort((a, b) => b[1] - a[1]);
+
+      let labels = [];
+      let values = [];
+
+      if (sorted.length <= topN) {
+        labels = sorted.map(item => item[0]);
+        values = sorted.map(item => item[1]);
+      } else {
+        const topItems = sorted.slice(0, topN);
+        const otherItems = sorted.slice(topN);
+
+        labels = topItems.map(item => item[0]);
+        values = topItems.map(item => item[1]);
+
+        const otherCount = otherItems.reduce((acc, cur) => acc + cur[1], 0);
+        labels.push(i18n[currentLang].otherLabel);
+        values.push(otherCount);
+      }
+
+      if (pieChartInstance) pieChartInstance.destroy();
+      const ctx = document.getElementById('pieChart').getContext('2d');
+      pieChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: [
+              '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+              '#06b6d4', '#ec4899', '#64748b', '#84cc16', '#a855f7', '#cbd5e1'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // 3. 柏拉圖 (Pareto Chart - Count + Cum %)
+    function renderParetoChart(data, groupCol) {
+      const groupMap = new Map();
+      data.forEach(row => {
+        const val = row[groupCol] || "N/A";
+        groupMap.set(val, (groupMap.get(val) || 0) + 1);
+      });
+
+      const sorted = Array.from(groupMap.entries()).sort((a, b) => b[1] - a[1]);
+      const totalCount = data.length;
+
+      const labels = sorted.map(item => item[0]);
+      const counts = sorted.map(item => item[1]);
+
+      let cumulativeSum = 0;
+      const cumPercentages = counts.map(count => {
+        cumulativeSum += count;
+        return totalCount > 0 ? parseFloat(((cumulativeSum / totalCount) * 100).toFixed(1)) : 0;
+      });
+
+      if (paretoChartInstance) paretoChartInstance.destroy();
+      const ctx = document.getElementById('paretoChart').getContext('2d');
+      paretoChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              type: 'line',
+              label: i18n[currentLang].cumPercentage,
+              data: cumPercentages,
+              borderColor: '#ef4444',
+              backgroundColor: '#ef4444',
+              borderWidth: 2,
+              yAxisID: 'yCum',
+              pointRadius: 4
+            },
+            {
+              type: 'bar',
+              label: i18n[currentLang].colCount,
+              data: counts,
+              backgroundColor: '#2563eb',
+              yAxisID: 'yCount'
             }
-
-            performBindsRow();
-            hideProgressModal();
-            updateUI();
-        }
-
-        function parseSingleFile(file) {
-            return new Promise((resolve, reject) => {
-                const ext = file.name.split('.').pop().toLowerCase();
-
-                if (ext === 'csv') {
-                    Papa.parse(file, {
-                        header: true,
-                        dynamicTyping: true,
-                        skipEmptyLines: true,
-                        complete: (results) => resolve(results.data),
-                        error: (err) => reject(err)
-                    });
-                } else if (ext === 'xlsx' || ext === 'xls') {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const data = new Uint8Array(e.target.result);
-                            const workbook = XLSX.read(data, { type: 'array' });
-                            const firstSheetName = workbook.SheetNames[0];
-                            const worksheet = workbook.Sheets[firstSheetName];
-                            const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-                            resolve(json);
-                        } catch (err) {
-                            reject(err);
-                        }
-                    };
-                    reader.onerror = (err) => reject(err);
-                    reader.readAsArrayBuffer(file);
-                } else if (ext === 'json') {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const json = JSON.parse(e.target.result);
-                            resolve(Array.isArray(json) ? json : [json]);
-                        } catch (err) {
-                            reject(err);
-                        }
-                    };
-                    reader.onerror = (err) => reject(err);
-                    reader.readAsText(file);
-                } else {
-                    reject(new Error("不支援的檔案格式"));
-                }
-            });
-        }
-
-        function showProgressModal() {
-            progressModalTitle.textContent = i18n[state.lang].progressTitle;
-            progressModal.classList.remove('hidden');
-        }
-
-        function updateProgress(currentStep, totalSteps, percent, statusMsg) {
-            progressFileStep.textContent = `${currentStep} / ${totalSteps} ${state.lang === 'zh' ? '檔案' : 'Files'}`;
-            progressPercent.textContent = `${percent}%`;
-            progressBarFill.style.width = `${percent}%`;
-            progressStatusText.textContent = statusMsg;
-        }
-
-        function hideProgressModal() {
-            progressModal.classList.add('hidden');
-            progressBarFill.style.width = '0%';
-        }
-
-        function performBindsRow() {
-            let merged = [];
-            const colSet = new Set();
-            colSet.add('_source_file');
-
-            state.uploadedFiles.forEach(fileObj => {
-                fileObj.rawData.forEach(row => {
-                    const rowCopy = { _source_file: fileObj.name, ...row };
-                    Object.keys(rowCopy).forEach(k => colSet.add(k));
-                    merged.push(rowCopy);
-                });
-            });
-
-            // Automatic Deduplication Logic
-            if (merged.length > 0) {
-                const initialCount = merged.length;
-                const uniqueSet = new Set();
-                const deduplicated = [];
-
-                merged.forEach(row => {
-                    const dataContentOnly = { ...row };
-                    delete dataContentOnly._source_file;
-                    const jsonKey = JSON.stringify(dataContentOnly);
-                    if (!uniqueSet.has(jsonKey)) {
-                        uniqueSet.add(jsonKey);
-                        deduplicated.push(row);
-                    }
-                });
-
-                const removedCount = initialCount - deduplicated.length;
-                merged = deduplicated;
-                
-                if (removedCount > 0) {
-                    showToast(i18n[state.lang].toastDedupe.replace('{n}', removedCount), 'info');
-                }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false } },
+            yCount: {
+              type: 'linear',
+              position: 'left',
+              beginAtZero: true,
+              ticks: { precision: 0 },
+              title: { display: true, text: i18n[currentLang].colCount }
+            },
+            yCum: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 100,
+              grid: { drawOnChartArea: false },
+              ticks: { callback: v => v + '%' },
+              title: { display: true, text: i18n[currentLang].cumPercentage }
             }
-
-            state.mergedRawData = merged;
-            state.allColumns = Array.from(colSet);
+          }
         }
+      });
+    }
 
-        function updateUI() {
-            if (state.uploadedFiles.length === 0) return;
+    // 4. 統計與對策空白表格渲染 (帶入勾選的動態過濾欄位)
+    function renderTable(data, groupCol) {
+      const headerTr = document.getElementById('table-header');
+      const bodyTbody = document.getElementById('table-body');
 
-            const t = i18n[state.lang];
+      headerTr.innerHTML = '';
+      bodyTbody.innerHTML = '';
 
-            fileListContainer.classList.remove('hidden');
-            bindSummarySection.classList.remove('hidden');
-            aggregationSection.classList.remove('hidden');
-            fileCounterBadge.classList.remove('hidden');
+      const txt = i18n[currentLang];
 
-            fileCounterBadge.textContent = t.fileCountBadge.replace('{n}', state.uploadedFiles.length);
-            fileList.innerHTML = state.uploadedFiles.map(f => `
-                <div class="file-item">
-                    <div class="file-info">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-                        <div>
-                            <p class="file-name" title="${f.name}">${f.name}</p>
-                            <p style="font-size: 0.625rem; color: var(--text-muted);">${f.rowCount.toLocaleString()} ${state.lang === 'zh' ? '列' : 'rows'} ‧ ${f.size}</p>
-                        </div>
-                    </div>
-                    <button onclick="removeFile(${f.id})" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.25rem;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
-                </div>
-            `).join('');
+      // 取得當前勾選的動態欄位（不包含主要分類欄位以避免重複）
+      const extraFilterCols = selectedFilterKeysOrder.filter(k => k !== groupCol);
 
-            statTotalRows.textContent = state.mergedRawData.length.toLocaleString();
-            statTotalCols.textContent = state.allColumns.length;
-            statFileCount.textContent = state.uploadedFiles.length;
+      // 表頭順序：[勾選的動態欄位...] -> [主要分類欄位] -> Count -> 原因分析(空白) -> 對策(空白) -> 負責人(空白) -> 預計完成日(空白)
+      const headers = [
+        ...extraFilterCols,
+        groupCol,
+        txt.colCount,
+        txt.colRootCause,
+        txt.colAction,
+        txt.colPIC,
+        txt.colDueDate
+      ];
 
-            renderRawDataTable();
-            updateColumnChipsUI();
-            computeAggregation();
-        }
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.innerText = h;
+        headerTr.appendChild(th);
+      });
 
-        function removeFile(fileId) {
-            state.uploadedFiles = state.uploadedFiles.filter(f => f.id !== fileId);
-            if (state.uploadedFiles.length === 0) {
-                resetApp();
-            } else {
-                performBindsRow();
-                updateUI();
-            }
-        }
+      // 根據包含動態欄位 + 主要分類欄位做複合鍵聚合
+      const groupMap = new Map();
 
-        function renderRawDataTable() {
-            const previewRows = state.mergedRawData.slice(0, 50);
-            rawDataCountBadge.textContent = i18n[state.lang].rawCountText
-                .replace('{total}', state.mergedRawData.length.toLocaleString())
-                .replace('{count}', previewRows.length);
+      data.forEach(row => {
+        const keyObj = {};
+        extraFilterCols.forEach(col => {
+          keyObj[col] = row[col] !== undefined && row[col] !== "" ? String(row[col]) : "N/A";
+        });
+        keyObj[groupCol] = row[groupCol] !== undefined && row[groupCol] !== "" ? String(row[groupCol]) : "N/A";
 
-            rawTableHeader.innerHTML = `
-                <tr>
-                    <th style="width: 40px;">#</th>
-                    ${state.allColumns.map(col => `<th>${escapeHTML(col)}</th>`).join('')}
-                </tr>
-            `;
+        const stringifiedKey = JSON.stringify(keyObj);
+        groupMap.set(stringifiedKey, (groupMap.get(stringifiedKey) || 0) + 1);
+      });
 
-            rawTableBody.innerHTML = previewRows.map((row, idx) => `
-                <tr>
-                    <td style="color: var(--text-muted); font-family: monospace;">${idx + 1}</td>
-                    ${state.allColumns.map(col => {
-                        const val = row[col] !== undefined && row[col] !== null ? row[col] : '';
-                        return `<td title="${escapeHTML(String(val))}">${escapeHTML(String(val))}</td>`;
-                    }).join('')}
-                </tr>
-            `).join('');
-        }
+      // 排序（依 Count 數量降冪）
+      const sorted = Array.from(groupMap.entries()).sort((a, b) => b[1] - a[1]);
 
-        function updateColumnChipsUI() {
-            columnSelectorChips.innerHTML = state.allColumns.map(col => {
-                const isSelected = state.selectedGroupBy.includes(col);
-                return `
-                    <button onclick="toggleGroupByColumn('${escapeHTML(col)}')" class="chip ${isSelected ? 'selected' : ''}">
-                        <span>${escapeHTML(col)}</span>
-                        ${isSelected ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
-                    </button>
-                `;
-            }).join('');
+      if (sorted.length === 0) {
+        const totalCols = headers.length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="${totalCols}" style="text-align:center; padding:2rem; color:var(--text-muted);">${txt.noData}</td>`;
+        bodyTbody.appendChild(tr);
+        return;
+      }
 
-            if (state.selectedGroupBy.length === 0) {
-                activeGroupByTags.innerHTML = `<span style="font-size: 0.75rem; font-style: italic; color: var(--text-muted);">${i18n[state.lang].noVarSelected}</span>`;
-            } else {
-                activeGroupByTags.innerHTML = state.selectedGroupBy.map(col => `
-                    <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: var(--primary-light); color: var(--primary);">
-                        ${escapeHTML(col)}
-                        <button onclick="toggleGroupByColumn('${escapeHTML(col)}')" style="background: none; border: none; cursor: pointer; color: var(--primary); display: flex;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                        </button>
-                    </span>
-                `).join('');
-            }
-        }
+      sorted.forEach(([jsonKey, count]) => {
+        const keyObj = JSON.parse(jsonKey);
+        const tr = document.createElement('tr');
 
-        function toggleGroupByColumn(colName) {
-            const index = state.selectedGroupBy.indexOf(colName);
-            if (index > -1) {
-                state.selectedGroupBy.splice(index, 1);
-            } else {
-                state.selectedGroupBy.push(colName);
-            }
-            updateColumnChipsUI();
-            computeAggregation();
-        }
+        let rowHtml = "";
+        
+        // 渲染動態欄位值
+        extraFilterCols.forEach(col => {
+          rowHtml += `<td style="color:#475569;">${keyObj[col]}</td>`;
+        });
 
-        function computeAggregation() {
-            if (state.selectedGroupBy.length === 0) {
-                resultsSection.classList.add('hidden');
-                state.aggregatedResult = [];
-                return;
-            }
+        // 渲染主要分類欄位值與 Count
+        rowHtml += `
+          <td style="font-weight:600; color:#1e293b;">${keyObj[groupCol]}</td>
+          <td><span class="badge" style="background:#dbeafe; color:#1e40af; font-size:0.85rem;">${count}</span></td>
+          <td style="color:#94a3b8; font-style:italic;">--</td>
+          <td style="color:#94a3b8; font-style:italic;">--</td>
+          <td style="color:#94a3b8; font-style:italic;">--</td>
+          <td style="color:#94a3b8; font-style:italic;">--</td>
+        `;
 
-            resultsSection.classList.remove('hidden');
+        tr.innerHTML = rowHtml;
+        bodyTbody.appendChild(tr);
+      });
+    }
 
-            const countsMap = new Map();
-            const naText = i18n[state.lang].naValue;
+    // 匯出 Excel（同步包含動態選擇的過濾欄位）
+    function exportToExcel() {
+      const groupCol = document.getElementById('select-group-col').value;
+      const filteredData = getFilteredData();
+      const txt = i18n[currentLang];
 
-            state.mergedRawData.forEach(row => {
-                if (!state.includeEmptyValues) {
-                    const hasEmpty = state.selectedGroupBy.some(col => {
-                        const val = row[col];
-                        return val === undefined || val === null || String(val).trim() === '';
-                    });
-                    if (hasEmpty) return;
-                }
+      const extraFilterCols = selectedFilterKeysOrder.filter(k => k !== groupCol);
 
-                const keyArray = state.selectedGroupBy.map(col => {
-                    const val = row[col];
-                    if (val === undefined || val === null || String(val).trim() === '') {
-                        return naText;
-                    }
-                    return String(val);
-                });
+      // 建立包含動態過濾欄位與空白對策的報表
+      const groupMap = new Map();
+      filteredData.forEach(row => {
+        const keyObj = {};
+        extraFilterCols.forEach(col => {
+          keyObj[col] = row[col] !== undefined && row[col] !== "" ? String(row[col]) : "N/A";
+        });
+        keyObj[groupCol] = row[groupCol] !== undefined && row[groupCol] !== "" ? String(row[groupCol]) : "N/A";
 
-                const compositeKey = JSON.stringify(keyArray);
-                countsMap.set(compositeKey, (countsMap.get(compositeKey) || 0) + 1);
-            });
+        const stringifiedKey = JSON.stringify(keyObj);
+        groupMap.set(stringifiedKey, (groupMap.get(stringifiedKey) || 0) + 1);
+      });
 
-            const resultList = [];
-            countsMap.forEach((count, keyStr) => {
-                const valuesArr = JSON.parse(keyStr);
-                const itemObj = {};
-                state.selectedGroupBy.forEach((col, idx) => {
-                    itemObj[col] = valuesArr[idx];
-                });
-                itemObj['count'] = count;
-                resultList.push(itemObj);
-            });
+      const summaryRows = Array.from(groupMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([jsonKey, count]) => {
+          const keyObj = JSON.parse(jsonKey);
+          const rowObj = {};
 
-            resultList.sort((a, b) => b.count - a.count);
-            state.aggregatedResult = resultList;
+          // 動態過濾欄位
+          extraFilterCols.forEach(col => {
+            rowObj[col] = keyObj[col];
+          });
 
-            renderCountTable();
-            renderChart();
-        }
+          // 分類欄位與對策空白項目
+          rowObj[groupCol] = keyObj[groupCol];
+          rowObj[txt.colCount] = count;
+          rowObj[txt.colRootCause] = ""; // 保持空白供線下填寫
+          rowObj[txt.colAction] = "";    // 保持空白
+          rowObj[txt.colPIC] = "";       // 保持空白
+          rowObj[txt.colDueDate] = "";   // 保持空白
+          return rowObj;
+        });
 
-        function renderCountTable() {
-            let filteredRows = state.aggregatedResult;
+      const wb = XLSX.utils.book_new();
 
-            if (state.filterSearchQuery) {
-                filteredRows = filteredRows.filter(row => {
-                    return Object.values(row).some(val => 
-                        String(val).toLowerCase().includes(state.filterSearchQuery)
-                    );
-                });
-            }
+      // Sheet 1: 統計對策空白表
+      const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Action_Plan_Template");
 
-            groupResultCountBadge.textContent = i18n[state.lang].groupCountBadge.replace('{n}', filteredRows.length.toLocaleString());
+      // Sheet 2: 篩選後的原始數據
+      const wsRaw = XLSX.utils.json_to_sheet(filteredData);
+      XLSX.utils.book_append_sheet(wb, wsRaw, "Filtered_Raw_Data");
 
-            countTableHeader.innerHTML = `
-                <tr>
-                    <th style="width: 40px;">#</th>
-                    ${state.selectedGroupBy.map(col => `<th>${escapeHTML(col)}</th>`).join('')}
-                    <th style="text-align: right; color: var(--primary);">Count (${state.lang === 'zh' ? '計數' : 'Frequency'})</th>
-                </tr>
-            `;
-
-            if (filteredRows.length === 0) {
-                countTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="${state.selectedGroupBy.length + 2}" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-                            ${i18n[state.lang].noResult}
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            const naText = i18n[state.lang].naValue;
-
-            countTableBody.innerHTML = filteredRows.map((row, idx) => `
-                <tr>
-                    <td style="color: var(--text-muted); font-family: monospace;">${idx + 1}</td>
-                    ${state.selectedGroupBy.map(col => {
-                        const val = row[col];
-                        const isNA = val === naText || val === '(空值/NA)' || val === '(NA / Empty)';
-                        return `
-                            <td>
-                                <span style="${isNA ? 'color: var(--text-muted); font-style: italic;' : ''}">
-                                    ${escapeHTML(String(val))}
-                                </span>
-                            </td>
-                        `;
-                    }).join('')}
-                    <td style="text-align: right; font-weight: 700; color: var(--primary); font-family: monospace;">
-                        ${row.count.toLocaleString()}
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function renderChart() {
-            const ctx = document.getElementById('countChart').getContext('2d');
-            
-            if (state.chartInstance) {
-                state.chartInstance.destroy();
-                state.chartInstance = null;
-            }
-
-            if (state.aggregatedResult.length === 0) return;
-
-            const top10 = state.aggregatedResult.slice(0, 10);
-            const labels = top10.map(row => {
-                return state.selectedGroupBy.map(col => row[col]).join(' - ');
-            });
-
-            const dataValues = top10.map(row => row.count);
-            const chartType = chartTypeSelect.value;
-
-            const colors = [
-                '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-                '#ec4899', '#06b6d4', '#84cc16', '#6366f1', '#64748b'
-            ];
-
-            state.chartInstance = new Chart(ctx, {
-                type: chartType,
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '筆數 (Count)',
-                        data: dataValues,
-                        backgroundColor: chartType === 'bar' ? '#2563eb' : colors,
-                        borderColor: chartType === 'bar' ? '#1d4ed8' : '#ffffff',
-                        borderWidth: 1,
-                        borderRadius: chartType === 'bar' ? 4 : 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: chartType !== 'bar',
-                            position: 'bottom',
-                            labels: { font: { size: 10 } }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return ` 數量: ${context.raw.toLocaleString()} 筆`;
-                                }
-                            }
-                        }
-                    },
-                    scales: chartType === 'bar' ? {
-                        y: { beginAtZero: true, ticks: { font: { size: 10 } } },
-                        x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } }
-                    } : {}
-                }
-            });
-        }
-
-        // CSV Export functions
-        function exportRawDataCSV() {
-            if (state.mergedRawData.length === 0) return;
-            const csv = Papa.unparse(state.mergedRawData);
-            downloadBlob(csv, `bind_rows_merged_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-            showToast('已匯出合併後 Raw Data CSV', 'success');
-        }
-
-        function exportCountDataCSV() {
-            if (state.aggregatedResult.length === 0) return;
-            const csv = Papa.unparse(state.aggregatedResult);
-            const groupByNames = state.selectedGroupBy.join('_');
-            downloadBlob(csv, `count_summary_${groupByNames}_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
-            showToast('已匯出計數統計結果 CSV', 'success');
-        }
-
-        function downloadBlob(content, filename, contentType) {
-            const blob = new Blob(["\ufeff" + content], { type: contentType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function resetApp() {
-            state.uploadedFiles = [];
-            state.mergedRawData = [];
-            state.allColumns = [];
-            state.selectedGroupBy = [];
-            state.aggregatedResult = [];
-            
-            if (state.chartInstance) {
-                state.chartInstance.destroy();
-                state.chartInstance = null;
-            }
-
-            fileListContainer.classList.add('hidden');
-            bindSummarySection.classList.add('hidden');
-            aggregationSection.classList.add('hidden');
-            resultsSection.classList.add('hidden');
-            rawDataContainer.classList.add('hidden');
-            fileCounterBadge.classList.add('hidden');
-            
-            fileInput.value = '';
-            showToast(i18n[state.lang].toastReset, 'info');
-        }
-
-        function escapeHTML(str) {
-            if (typeof str !== 'string') return str;
-            return str
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        function showToast(message, type = 'info') {
-            const toastContainer = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            if (type === 'error') toast.style.backgroundColor = '#dc2626';
-
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                <span>${escapeHTML(message)}</span>
-            `;
-
-            toastContainer.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(10px)';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-    </script>
+      // 匯出檔案
+      const filename = `Defect_Analysis_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    }
+  </script>
 </body>
 </html>
