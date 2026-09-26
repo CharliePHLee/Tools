@@ -1,4 +1,3 @@
-html
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -8,7 +7,10 @@ html
 
   <!-- 第三方函式庫 (均可在無網際網路環境運行或替換為本機檔案) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- 用於強大且高相容性的檔案讀取 -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- 用於產出 openxlsx2 專業美工樣式的 Excel 匯出 -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
@@ -140,7 +142,7 @@ html
         <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         系統功能與上傳說明
       </h2>
-      <p id="desc-text">本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、80/20 柏拉圖分析及空白表格匯出功能。</p>
+      <p id="desc-text">本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、80/20 柏拉圖分析及精美 openxlsx2 風格 Excel 報表匯出功能。</p>
     </div>
 
     <!-- Step 1: 檔案選擇 -->
@@ -173,7 +175,7 @@ html
         </div>
         
         <div class="config-grid">
-          <!-- 時間變數 (僅列出符合時間格式/名稱的欄位) -->
+          <!-- 時間變數 -->
           <div class="form-group">
             <label id="lbl-time-col">時間/日期變數 (趨勢圖 X 軸):</label>
             <select id="select-time-col" class="form-select" onchange="onRoleVariableChange()"></select>
@@ -183,7 +185,7 @@ html
             <label id="lbl-group-col">主要分類變數 (圓餅圖/柏拉圖/表格分析欄位):</label>
             <select id="select-group-col" class="form-select" onchange="onRoleVariableChange()"></select>
           </div>
-          <!-- 多選動態過濾器欄位選擇區 (已選擇角色者會隱藏) -->
+          <!-- 多選動態過濾器欄位選擇區 -->
           <div class="form-group" style="grid-column: span 1 / -1;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.2rem;">
               <label id="lbl-filter-var">選擇動態過濾器欄位 (可多選，預設不選擇):</label>
@@ -283,7 +285,7 @@ html
           </div>
           <button class="btn-primary" onclick="exportToExcel()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span id="btn-export">下載分析對策表格 (Excel)</span>
+            <span id="btn-export">下載分析對策表格</span>
           </button>
         </div>
 
@@ -322,7 +324,7 @@ html
       zh: {
         navTitle: "維修與不良數據分析系統",
         descTitle: "系統功能與上傳說明",
-        descText: "本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、80/20 柏拉圖分析及空白表格匯出功能。",
+        descText: "本系統專為工程與品質管理團隊設計，用於分析產品維修紀錄與不良數據。請匯入包含「日期/時間」、「機種/產品線」、「不良現象/原因」等資訊的原始資料檔（支援 CSV、Excel、JSON）。系統將自動進行多檔合併與去重，並提供動態連動搜尋過濾、順序調整、趨勢圖表、80/20 柏拉圖分析及精美 openxlsx2 風格 Excel 報表匯出功能。",
         step1Title: "選擇或拖曳數據檔案 (多檔合併 binds_row)",
         dropzoneText: "點擊或將多個 CSV / Excel / JSON 檔案拖曳至此處",
         dropzoneSubtext: "合併時將自動清除完全相同的重複列資料 (Auto-Deduplicated)",
@@ -342,7 +344,7 @@ html
         lblTimeScale: "時間單位：",
         lblTopN: "顯示數量：",
         step3Title: "分析與不良對策表 (表格輸出)",
-        btnExport: "下載分析對策表格 (Excel)",
+        btnExport: "下載分析對策表格 (openxlsx2 樣式)",
         colCount: "發生數量 (Count)",
         colRootCause: "原因分析 (Root Cause)",
         colAction: "對策 (Action)",
@@ -351,7 +353,7 @@ html
         allOptions: "全選 (All)",
         otherLabel: "其他 (Others)",
         cumPercentage: "累積百分比 (%)",
-        modalProcessing: "正在處理與合併資料...",
+        modalProcessing: "正在處理數據與匯出報表...",
         noData: "查無符合篩選條件的數據",
         noFilterSelected: "尚未勾選任何過濾欄位 (使用全量數據)",
         selectedCount: "已選擇",
@@ -360,7 +362,7 @@ html
       en: {
         navTitle: "Repair & Defect Data Analysis System",
         descTitle: "System Function & Instructions",
-        descText: "Designed for engineering and QA teams to analyze repair records and defect data. Upload raw files (CSV, Excel, JSON) with 'Date/Time', 'Model/Line', 'Defect Phenomenon', etc. The system auto-merges, deduplicates, and provides searchable cascading filtering, ordering, trend analysis, 80/20 Pareto charts, and exportable action tables.",
+        descText: "Designed for engineering and QA teams to analyze repair records and defect data. Upload raw files (CSV, Excel, JSON) with 'Date/Time', 'Model/Line', 'Defect Phenomenon', etc. The system auto-merges, deduplicates, and provides searchable cascading filtering, ordering, trend analysis, 80/20 Pareto charts, and openxlsx2-styled Excel export.",
         step1Title: "Select or Drop Data Files (binds_row)",
         dropzoneText: "Click or drag multiple CSV / Excel / JSON files here",
         dropzoneSubtext: "Fully identical duplicate rows will be automatically removed",
@@ -380,7 +382,7 @@ html
         lblTimeScale: "Time Unit:",
         lblTopN: "Top Items:",
         step3Title: "Analysis & Action Plan Table (Export Template)",
-        btnExport: "Export Analysis Report (Excel)",
+        btnExport: "Export Report",
         colCount: "Count",
         colRootCause: "Root Cause",
         colAction: "Action",
@@ -389,7 +391,7 @@ html
         allOptions: "Select All",
         otherLabel: "Others",
         cumPercentage: "Cumulative %",
-        modalProcessing: "Processing and merging files...",
+        modalProcessing: "Processing data & generating report...",
         noData: "No data matches current filters",
         noFilterSelected: "No filter fields selected (Using full dataset)",
         selectedCount: "Selected",
@@ -509,7 +511,7 @@ html
       renderAll();
     }
 
-    // 解析單檔
+    // 解析單檔 (使用 XLSX 分析 CSV/Excel/JSON)
     function parseSingleFile(file) {
       return new Promise((resolve, reject) => {
         const ext = file.name.split('.').pop().toLowerCase();
@@ -523,11 +525,13 @@ html
         } else if (ext === 'xlsx' || ext === 'xls') {
           const reader = new FileReader();
           reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-            resolve(jsonData);
+            try {
+              const data = new Uint8Array(e.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+              const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+              resolve(jsonData);
+            } catch (err) { reject(err); }
           };
           reader.onerror = (err) => reject(err);
           reader.readAsArrayBuffer(file);
@@ -581,32 +585,25 @@ html
       activeFilterValues = {};
       filterSearchTerms = {};
 
-      // 需求 2：時間選單「只提供」時間/日期特徵欄位
       const timeCandidates = keys.filter(k => isTimeColumn(k, firstRow[k]));
-      // 若萬一無符合特徵的欄位，fallback 列出全部
       const timeKeys = timeCandidates.length > 0 ? timeCandidates : keys;
 
       const selectTime = document.getElementById('select-time-col');
       selectTime.innerHTML = '';
       timeKeys.forEach(k => selectTime.add(new Option(k, k)));
 
-      // 預設時間欄位
       let defaultTime = timeKeys.find(k => /date|time|日期|時間/i.test(k)) || timeKeys[0];
       selectTime.value = defaultTime;
 
-      // 預設主要分類欄位（不包含時間欄位）
       const groupCandidates = keys.filter(k => k !== defaultTime);
       let defaultGroup = groupCandidates.find(k => /defect|reason|model|不良|原因|機種/i.test(k)) || groupCandidates[0];
 
-      // 渲染主要分類下拉選單
       updateGroupSelectOptions(keys, defaultTime, defaultGroup);
-
-      // 渲染動態過濾器選購清單（互斥隱藏已選角色）
       renderDynamicFilterCheckboxes(keys);
       renderFilterGrid();
     }
 
-    // 更新主要分類下拉選單（自動剔除當前時間欄位）
+    // 更新主要分類下拉選單
     function updateGroupSelectOptions(allKeys, timeColVal, currentGroupVal) {
       const selectGroup = document.getElementById('select-group-col');
       selectGroup.innerHTML = '';
@@ -628,7 +625,6 @@ html
       const timeCol = document.getElementById('select-time-col').value;
       let groupCol = document.getElementById('select-group-col').value;
 
-      // 如果時間變數與分類變數相同，重新指定分類變數
       if (timeCol === groupCol) {
         updateGroupSelectOptions(allKeys, timeCol, "");
         groupCol = document.getElementById('select-group-col').value;
@@ -636,7 +632,6 @@ html
         updateGroupSelectOptions(allKeys, timeCol, groupCol);
       }
 
-      // 需求 3：如果原本被選為動態過濾器的欄位變成了時間或主要分類，自動清除
       selectedFilterKeysOrder = selectedFilterKeysOrder.filter(k => k !== timeCol && k !== groupCol);
       delete activeFilterValues[timeCol];
       delete activeFilterValues[groupCol];
@@ -646,14 +641,13 @@ html
       renderAll();
     }
 
-    // 需求 3：動態過濾器欄位不出現時間變數與主要分類變數（互斥出現一次）
+    // 動態過濾器欄位不出現時間變數與主要分類變數
     function renderDynamicFilterCheckboxes(allKeys) {
       const timeCol = document.getElementById('select-time-col').value;
       const groupCol = document.getElementById('select-group-col').value;
       const container = document.getElementById('filter-vars-checkbox-group');
       container.innerHTML = '';
 
-      // 過濾掉時間變數與主要分類變數
       const availableFilterKeys = allKeys.filter(k => k !== timeCol && k !== groupCol);
 
       availableFilterKeys.forEach(key => {
@@ -685,7 +679,7 @@ html
       });
     }
 
-    // 調整過濾面板卡片順序 (Left / Right)
+    // 調整過濾面板卡片順序
     function moveFilterOrder(index, direction) {
       const targetIndex = index + direction;
       if (targetIndex < 0 || targetIndex >= selectedFilterKeysOrder.length) return;
@@ -698,7 +692,7 @@ html
       renderAll();
     }
 
-    // 取得除去特定欄位後的暫存過濾資料（用於計算該欄位「當前可選」的有效範圍）
+    // 取得除去特定欄位後的暫存過濾資料
     function getFilteredDataExcept(excludeKey) {
       return rawMergedData.filter(row => {
         for (let key of selectedFilterKeysOrder) {
@@ -1058,7 +1052,7 @@ html
       });
     }
 
-    // 3. 需求 1：80/20 柏拉圖 (Pareto Chart - 累計達 80% 歸為主要，其餘歸為「其他」)
+    // 3. 80/20 柏拉圖 (Pareto Chart)
     function renderParetoChart(data, groupCol) {
       const groupMap = new Map();
       data.forEach(row => {
@@ -1069,21 +1063,17 @@ html
       const sorted = Array.from(groupMap.entries()).sort((a, b) => b[1] - a[1]);
       const totalCount = data.length;
 
-      // 80/20 法則分組邏輯
       let primaryItems = [];
       let otherSum = 0;
       let tempCumSum = 0;
 
       for (let i = 0; i < sorted.length; i++) {
         const [label, count] = sorted[i];
-        // 算出加上當前項目後的累積百分比
-        const currentCumPct = ((tempCumSum + count) / totalCount) * 100;
 
         if (tempCumSum / totalCount < 0.8 || primaryItems.length === 0) {
           primaryItems.push([label, count]);
           tempCumSum += count;
         } else {
-          // 超過 80% 門檻的所有次要項目合併至「其他」
           otherSum += count;
         }
       }
@@ -1096,7 +1086,6 @@ html
         finalCounts.push(otherSum);
       }
 
-      // 重新計算合併後的累積百分比
       let cumulativeSum = 0;
       const cumPercentages = finalCounts.map(count => {
         cumulativeSum += count;
@@ -1230,13 +1219,24 @@ html
       });
     }
 
-    // 匯出 Excel
-    function exportToExcel() {
+    // openxlsx2 專業樣式匯出模組 (採用 ExcelJS 構建)
+    async function exportToExcel() {
+      showProgress(true, "正在繪製 openxlsx2 高質感 Excel 報表...", 50);
+
       const groupCol = document.getElementById('select-group-col').value;
       const filteredData = getFilteredData();
       const txt = i18n[currentLang];
 
       const extraFilterCols = selectedFilterKeysOrder.filter(k => k !== groupCol);
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "Defect Analysis System";
+      workbook.created = new Date();
+
+      // Sheet 1: 統計對策表 (Action_Plan_Template)
+      const wsSummary = workbook.addWorksheet("Action_Plan_Template", {
+        views: [{ showGridLines: true }]
+      });
 
       const groupMap = new Map();
       filteredData.forEach(row => {
@@ -1250,38 +1250,141 @@ html
         groupMap.set(stringifiedKey, (groupMap.get(stringifiedKey) || 0) + 1);
       });
 
-      const summaryRows = Array.from(groupMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .map(([jsonKey, count]) => {
-          const keyObj = JSON.parse(jsonKey);
-          const rowObj = {};
+      const summaryHeaders = [
+        ...extraFilterCols,
+        groupCol,
+        txt.colCount,
+        txt.colRootCause,
+        txt.colAction,
+        txt.colPIC,
+        txt.colDueDate
+      ];
 
-          extraFilterCols.forEach(col => {
-            rowObj[col] = keyObj[col];
-          });
+      const headerRow1 = wsSummary.addRow(summaryHeaders);
+      headerRow1.height = 26;
 
-          rowObj[groupCol] = keyObj[groupCol];
-          rowObj[txt.colCount] = count;
-          rowObj[txt.colRootCause] = ""; // 保持空白供線下填寫
-          rowObj[txt.colAction] = "";    // 保持空白
-          rowObj[txt.colPIC] = "";       // 保持空白
-          rowObj[txt.colDueDate] = "";   // 保持空白
-          return rowObj;
+      const sortedSummary = Array.from(groupMap.entries()).sort((a, b) => b[1] - a[1]);
+      sortedSummary.forEach(([jsonKey, count]) => {
+        const keyObj = JSON.parse(jsonKey);
+        const rowVals = [];
+
+        extraFilterCols.forEach(col => rowVals.push(keyObj[col]));
+        rowVals.push(keyObj[groupCol]);
+        rowVals.push(count);
+        rowVals.push("");
+        rowVals.push("");
+        rowVals.push("");
+        rowVals.push("");
+
+        const r = wsSummary.addRow(rowVals);
+        r.height = 22;
+      });
+
+      applyOpenxlsx2Style(wsSummary, summaryHeaders.length);
+
+      // Sheet 2: 原始資料 (Filtered_Raw_Data)
+      const wsRaw = workbook.addWorksheet("Filtered_Raw_Data", {
+        views: [{ showGridLines: true }]
+      });
+
+      if (filteredData.length > 0) {
+        const rawHeaders = Object.keys(filteredData[0]);
+        const headerRow2 = wsRaw.addRow(rawHeaders);
+        headerRow2.height = 26;
+
+        filteredData.forEach(row => {
+          const rowVals = rawHeaders.map(h => row[h]);
+          const r = wsRaw.addRow(rowVals);
+          r.height = 20;
         });
 
-      const wb = XLSX.utils.book_new();
+        applyOpenxlsx2Style(wsRaw, rawHeaders.length);
+      }
 
-      // Sheet 1: 統計對策空白表
-      const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Action_Plan_Template");
+      showProgress(true, "下載中...", 90);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Defect_Analysis_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-      // Sheet 2: 篩選後的原始數據
-      const wsRaw = XLSX.utils.json_to_sheet(filteredData);
-      XLSX.utils.book_append_sheet(wb, wsRaw, "Filtered_Raw_Data");
+      showProgress(false);
+    }
 
-      // 匯出檔案
-      const filename = `Defect_Analysis_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
-      XLSX.writeFile(wb, filename);
+    // openxlsx2 核心視覺渲染演算法
+    function applyOpenxlsx2Style(worksheet, colCount) {
+      const headerRow = worksheet.getRow(1);
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1E293B' }
+        };
+        cell.font = {
+          name: 'Segoe UI',
+          size: 11,
+          bold: true,
+          color: { argb: 'FFFFFFFF' }
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+          wrapText: true
+        };
+        cell.border = {
+          bottom: { style: 'medium', color: { argb: 'FF0F172A' } },
+          right: { style: 'thin', color: { argb: 'FF334155' } }
+        };
+      });
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+
+        const isEven = rowNumber % 2 === 0;
+        const bgArgb = isEven ? 'FFF8FAFC' : 'FFFFFFFF';
+
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: bgArgb }
+          };
+          cell.font = {
+            name: 'Segoe UI',
+            size: 10,
+            color: { argb: 'FF0F172A' }
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+
+          if (typeof cell.value === 'number') {
+            cell.numFmt = '#,##0';
+            cell.alignment = { vertical: 'middle', horizontal: 'right' };
+          } else {
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          }
+        });
+      });
+
+      worksheet.columns.forEach((column) => {
+        let maxLen = 12;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          if (cell.value) {
+            const valStr = String(cell.value);
+            const len = valStr.replace(/[^\x00-\xff]/g, "aa").length;
+            if (len > maxLen) maxLen = len;
+          }
+        });
+        column.width = Math.min(Math.max(maxLen + 4, 12), 45);
+      });
     }
   </script>
 </body>
